@@ -83,18 +83,6 @@ ARRAYS, POINTERS, AND “NO ARRAY ASSIGNMENT”
 • No auto-growing types: you manage sizes, reallocate manually when needed.
 • Undefined behavior exists: out-of-bounds, use-after-free, uninitialized reads, integer overflow (signed), etc. The compiler may optimize under assumptions, so avoid UB.
 
-QUICK REFERENCE SNIPPETS
-1) Swap with pointers
-    void swap(int *a, int *b){ int t=*a; *a=*b; *b=t; }
-2) Safe string copy pattern (ensure room for '\0')
-    // dest has size DEST_N
-    strncpy(dest, src, DEST_N-1);
-    dest[DEST_N-1] = '\0';
-3) Bit flags
-    enum { READ=1<<0, WRITE=1<<1, EXEC=1<<2 };
-    unsigned perms = READ | WRITE;
-    if (perms & READ) { /* can read */ }
-
 KEY TAKEAWAYS
 • C gives you predictability and control—at the cost of responsibility.
 • Know your types and sizes (`sizeof`), and how data lives in registers and memory.
