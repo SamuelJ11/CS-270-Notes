@@ -1,0 +1,66 @@
+SHELL COMMANDS
+
+• When you log in via ssh, the OS runs a program called a shell that reads the commands you type and execute them.  The default shell for your VM is called bash.   
+The shell offers powerful capabilities, including:
+
+    - Control over a large number of aspects of how the shell behaves, including the list of directories it searches for commands you tell it to execute
+    - Aids to moving around (changing the working directory) in the file system
+    - Keeping a command history, so you don't have to re-type commands you already given
+    - Ability to define shell variables: named strings, that can be plugged into commands; some of these have conventional uses
+    - Ability to define aliases: shorthand names for common commands and command-option combinations
+    - Ability to write and execute simple programs called scripts -- sequences of shell commands, including control statements like loops.
+
+• script is a program that records everything you type and everything the terminal prints into a text file:
+    - think of it like a DVR for your terminal session — it makes a full transcript.
+    - use script mysession.txt to start a session
+    - log back in with script -a mysession.txt to resume an interrupted session
+    - use "exit" to end the writing of the script
+    - NEVER READ OR PRINT THE SCRIPT WHILE THE SCRIPT PROGRAM IS RUNNING!!! 
+
+• Files in an Operating System are invariably organized in a tree-structured directory hierarchy.  A directory (what some OS's call a "folder") is simply a 
+file that contains filename-to-location (i.e., where it is stored in a disk) mappings. The location part is handled by the operating system, 
+but you can see the names of the files.
+    - The OS and shell together maintain a notion of the current working directory, which starts out as your "home" directory when you first log in.  
+    - The command cd ⟨directory⟩ makes directory the working directory. The pathname of directory may be either relative to the current directory 
+    (i.e., further down in the directory hierarchy), or a full pathname (which starts with /, the root of the filesystem tree).
+
+• The commands pushd, popd, and dirs work similarly to cd and pwd, except that they keep track of previous working directories in a stack, i.e., last-in-first-out fashion.  
+
+    - "pushd ⟨directory⟩" makes directory the current working directory and pushes it onto the "directory stack".  This command with no arguments swaps the 
+    top two directories on the stack.
+    - "popd" removes the current working directory from the stack and changes to the previous one, which becomes the new top of the stack. 
+    - You can see the current contents of the directory stack by typing "dirs".
+    - "wget" is used to download files from the internet.
+
+• A mask is a number you use in a bitwise operation (usually AND, OR, or XOR) to select or modify specific bits in another number:
+    - Sometimes you don’t care about the other bits, you just want to know if a specific feature/flag is set.
+    - In programming, many numbers store multiple “flags” in different bits. A mask lets you pick out exactly the bit you care about without touching the others.
+    - Example:  
+        Number: 0x98765430   (binary: 10011000 01110110 01010100 00110000)
+        Mask:   0x10         (binary: 00000000 00000000 00000000 00010000)
+
+        Bitwise AND operation:
+
+        10011000 01110110 01010100 00110000   (0x98765430)
+    &   00000000 00000000 00000000 00010000   (0x10)
+    --------------------------------------------------
+        00000000 00000000 00000000 00010000   (result = 0x10)
+
+    - Explanation:
+        The mask isolates bit 4 of the number.
+        All other bits are cleared (set to 0).
+        The result in decimal = 16, showing that bit 4 is set.
+
+• IMPORTANT FOR WHEN YOU WANT TO NEGATE A BINARY OR HEX NUMBER:
+    - Remember, when negating a all bits in binary, you can use the 2's complement trick of doing 1111 - (binary number)
+    - Example:
+        x = 1011 -> ~x = 1111 - 1011 = 0100
+    - We can extend this logic to hexadecimal numbers:
+        x = 0x98765430 -> ~x = 0xFFFFFFFF - 0x98765430 = 0x6789ABCF
+
+GDB DEBUGGER
+
+• The command step tells gdb to execute one line of code; it then prints out the next line of the source.
+• At any time you can get a listing of the next several lines with the command list.
+    
+

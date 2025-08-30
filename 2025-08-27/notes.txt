@@ -1,4 +1,5 @@
 WHY LEARN C
+
 • “Portable assembly language”: C maps closely to hardware (registers, memory, instructions) without being tied to one CPU. The compiler does the last-mile translation, so well-written C ports across platforms with small changes.
 • Systems programming: kernels, drivers, shells, compilers, DB engines, networking stacks. C compiles to very efficient machine code and avoids hidden runtime costs.
 • “No magic”: C omits many high-level features (no objects/GC/auto-growing containers), so performance and behavior are predictable and under your control.
