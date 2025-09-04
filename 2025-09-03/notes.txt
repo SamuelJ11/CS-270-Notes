@@ -1,8 +1,7 @@
-CHAPTER 1
+CHAPTER 1:  A TOUR OF COMPUTER SYSTEMS
 
-I. A TOUR OF COMPUTER SYSTEMS
 
-  A. Information is Bits + Context
+  I. Information is Bits + Context
 
     • characters are represented in 8-bit chunchs called bytes, according to the ACSI II standard.
 
@@ -11,7 +10,7 @@ I. A TOUR OF COMPUTER SYSTEMS
 
     • all statements are terminated by the invisible newline character '\n'
 
-  B. Programs are Translated by other Programs into Different Forms
+  II. Programs are Translated by other Programs into Different Forms
 
     • in order to run the hello.c program, the statements must be translated by other programs into low-level machine level 
       instructions, which are then packaged into an executable object program and stored as a binary disk file --> this 
@@ -37,9 +36,26 @@ I. A TOUR OF COMPUTER SYSTEMS
 
           --> the linker handles this merging, which results in the hello file (executable)
   
-  C. It Pays to Understand How Compilation Systems Work
-  
-    •
+  III. It Pays to Understand How Compilation Systems Work
 
+    • There are important reasons why we should understand how compilation systems work:
 
+      - optimizing program performance
+      - understanding link-time errors
+      - avoiding security holes
+      
+  IV. Processors Read and Interpret Instructions Stored in Memory
 
+    • To run the executable file on a Unix system, we type its name to an application program known as a shell:
+
+        --> @SamuelJ11/workspaces/CS-270-Notes/2025-09-03 (main) $ ./hello.c
+
+    • The shell is a command-line interpreter that prints a prompt, wiat for you to type a command line, and then
+      performs teh command:
+
+        --> if the first word of the command line does not correspond to a built in shell command, then the shell
+            assumes that its the name of an executable file that it should load and run.
+
+    A. Hardware Organization of a System
+
+      •
