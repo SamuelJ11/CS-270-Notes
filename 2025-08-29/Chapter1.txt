@@ -2,21 +2,21 @@ CHAPTER 1:  A TOUR OF COMPUTER SYSTEMS
 
   I. Information is Bits + Context
 
-    • characters are represented in 8-bit chunchs called bytes, according to the ACSI II standard.
+    • Characters are represented in 8-bit chunchs called bytes, according to the ACSI II standard.
 
-    • the hello.c program is stored in a file as a sequence of bytes, which have an integer value that corresponds
+    • The hello.c program is stored in a file as a sequence of bytes, which have an integer value that corresponds
       to some character --> files containing exclusively ACSI II characters are called text files
 
-    • all statements are terminated by the invisible newline character '\n'
+    • All statements are terminated by the invisible newline character '\n'
 
 
   II. Programs are Translated by other Programs into Different Forms
 
-    • in order to run the hello.c program, the statements must be translated by other programs into low-level machine level 
+    • In order to run the hello.c program, the statements must be translated by other programs into low-level machine level 
       instructions, which are then packaged into an executable object program and stored as a binary disk file --> this 
       is performed by a compiler driver:
 
-    • the gcc compiler reads the source file hello.c and translates it into 
+    • The gcc compiler reads the source file hello.c and translates it into 
       an executalbe object file (done in four phases):
 
         - Preprocessing phase:  the preprocessor (cpp) modifies the original C program accoriding to directives that begin
@@ -146,7 +146,7 @@ CHAPTER 1:  A TOUR OF COMPUTER SYSTEMS
 
     • Storage at one level serves as a cache for storage at the next lower level (i.e. the register file is a cache for the L1 cache).
 
-      - Register file --> L1 cache --> L2 cache --> L3 cache --> main memory --> local secondary storage --> remote secondary storage
+      - register file --> L1 cache --> L2 cache --> L3 cache --> main memory --> local secondary storage --> remote secondary storage
 
   
   VII. The Operating System Manages the Hardware
@@ -160,50 +160,50 @@ CHAPTER 1:  A TOUR OF COMPUTER SYSTEMS
      • The operating system has two primary purposes:  (1) to protect the hardware from misuse by runaway applications and (2) to provide
        applications with simple and uniform mechanism for interacting with low-level hardware devices.
 
-       - The OS achieves both goals via processes, virtual memory and files.
+       - the OS achieves both goals via processes, virtual memory and files.
 
     A. processes
 
       • A process is the operating system's abstraction for running a program.  
 
-        - On a system with one CPU, multiple processes take turns using the CPU (i.e process A runs for a short time, then is paused --> rocess B runs 
+        - on a system with one CPU, multiple processes take turns using the CPU (i.e process A runs for a short time, then is paused --> rocess B runs 
           for a short time, then is paused.  The CPU switches back and forth so quickly that it looks like both are running at the same time.)
 
-        - This interleaving of instructions is handled by the OS.
+        - this interleaving of instructions is handled by the OS.
 
       • The OS keeps track of all the state information that the process needs in order to run, known as the 'context'.
 
-        - The context includes information such as the current values of the PC, the register file, and the contents of main memory
+        - the context includes information such as the current values of the PC, the register file, and the contents of main memory
 
-        - When the operating system decides to transfer control from the current process ot some new process, it performs a 'context switch' 
+        - when the operating system decides to transfer control from the current process ot some new process, it performs a 'context switch' 
           by saving the context of the current process, restoring the context of the new process, and then passing control to the new process.
 
       • Using the hello.c program as an example:
       
-        - (1) The shell process is running alone, waiting for user input.
+        - (1) the shell process is running alone, waiting for user input.
         
-        - (2) When we ask it to run the hello program, the shell program carries out our request by invoking a special function known as a 'system call' 
+        - (2) when we ask it to run the hello program, the shell program carries out our request by invoking a special function known as a 'system call' 
               that passes control to the operating system.
 
-        - (3) The operating system saves the shell's context, creates anew hello process and its context, and passes control to the new hello process.
+        - (3) the operating system saves the shell's context, creates anew hello process and its context, and passes control to the new hello process.
 
-        - (4) After hello terminates, the OS restores the context of the shell process and passes control back to it.
+        - (4) after hello terminates, the OS restores the context of the shell process and passes control back to it.
 
       •  The transition from one process to another is managed by the operating system 'kernel' (the portion of the OS code that is always resident in memory, i.e 
          it is loaded into RAM and never swapped out.)
 
-         - The kernel is not a separate process, but a collection of code and data structures that the OS uses to manage all the processes.
+         - the kernel is not a separate process, but a collection of code and data structures that the OS uses to manage all the processes.
 
     B. Threads
 
       • In modern systems a process can consist of multiple execution units called 'threads', each running in the context of the process and sharing 
         the same code and global data.
 
-        - Think of a process as a book, and each thread as a finger pointing to a page.  
+        - think of a process as a book, and each thread as a finger pointing to a page.  
 
-        - All fingers are in the same book (same code and data).
+        - all fingers are in the same book (same code and data).
         
-        - But each finger can be on a different page (different execution point)
+        - but each finger can be on a different page (different execution point)
 
       • Threads allow a process to do multiple things at once, while still sharing the same memory.
        
@@ -216,24 +216,47 @@ CHAPTER 1:  A TOUR OF COMPUTER SYSTEMS
 
       • The virutal address space is divided into regions, each with a specific purpose:
 
-        - Program Code and Data (lowest addresses):  initialized directly from the contents of an ececutable file, and has a fixed size once the program starts.
+        - program Code and data (lowest addresses):  initialized directly from the contents of an ececutable file, and has a fixed size once the program starts.
 
-        - Heap:  following the code and data areas, the heap expands and contracts dynamically at run time as a result of calls to standard library routines such
+        - heap:  following the code and data areas, the heap expands and contracts dynamically at run time as a result of calls to standard library routines such
                  as 'malloc' and 'free'.
 
-        - Shared libraries (middle of address space):  stores the code and data for shared libraries (i.e. standard C library and math library)
+        - shared libraries (middle of address space):  stores the code and data for shared libraries (i.e. standard C library and math library)
 
-        - Stack (top of USER'S virtual address space):  the user stack is used by the compiler to implement function calls - expands and contracts dynamically 
+        - stack (top of USER'S virtual address space):  the user stack is used by the compiler to implement function calls - expands and contracts dynamically 
                                                         (each time we call a function, the stack grows, each time we return from a function it contracts.)    
 
-        - Kernel virtual memory (top of virtual address space):  application programs do not have read or write permissions to this area and cannot directly call functions 
+        - kernel virtual memory (top of virtual address space):  application programs do not have read or write permissions to this area and cannot directly call functions 
                                                                  defined in the kernel code (the process must call the kernel via a system call). 
 
-      D. Files
+    D. Files
 
       • A file is simply a sequence of bytes - every I/O device (even networks) are modeled as a file.  
 
-        - All input and output in the system is performed by reading and writing files using a small set of system calls known as 'Unix I/O'.
+        - all input and output in the system is performed by reading and writing files using a small set of system calls known as 'Unix I/O'.
         
 
   VIII. Systems Communicate with Other Systems Using Networks 
+
+    • Modern systems are often linked to other systems by networks
+
+      - form the point of view of an individual system, the network can be viewed as just another I/O device (network adapter).
+
+      - suppose we use a telnet client running on our local machine to connect to a telnet server on a remote machine:
+
+        -- After we type the hello command in the Telnet client on our local machine and press enter, the client prepares the command string to be sent over the network.
+
+        -- The telnet client sends the command string to the Telnet server running on the remote machine.
+
+        -- Once the telnet server receives the string, it forwards the command to the remote shell program that is running on the remote machine and waiting for input.
+
+        -- The remote shell executes the hello program, which generates the output string.
+
+        -- The telnet server then receives the output string from the remote shell and sends it back across the network to the telnet client on the local machine, which 
+           finally displays the output on the local terminal.
+
+  
+  IX. Important Themes
+
+    A.  Amdahl’s Law
+
