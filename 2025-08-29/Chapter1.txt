@@ -271,8 +271,18 @@ CHAPTER 1:  A TOUR OF COMPUTER SYSTEMS
 
         -- Tₙ = (1 - 𝛼).Tₒ + [(𝛼.Tₒ) / k] 
 
-        -- Tₙ = Tₒ[(1 - 𝛼) + 𝛼 / k]
+        -- Tₙ = Tₒ.[(1 - 𝛼) + 𝛼 / k]
 
-      - from this we can compute the speedup (Tₒ / Tₙ):
+      - from this we can compute the speedup S = (Tₒ / Tₙ):
+
+      - S = Tₒ / (1 - 𝛼).Tₒ + [(𝛼.Tₒ) / k] 
+
+      - S = Tₒ / Tₒ.[(1 - 𝛼) + 𝛼 / k]
+
+      - S = 1 / (1 - 𝛼) + 𝛼 / k
+
+        -- As an example, consider the case where a part of the system that initially consumed 60% of the time (α =0.6) is sped up by a factor of 3 (k =3). 
+        
+        -- Then we get a speedup of 1 / [0.4 + (0.6 / 3)] = 1.67
 
 
