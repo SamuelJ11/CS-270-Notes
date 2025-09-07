@@ -121,8 +121,7 @@ CHAPTER 2:  REPRESENTING AND MANIPULATING INFORMATION
 
                     -- logical:  a logical right shift fills the left end with k zeroes, giving a result [0, 0, . . . xw₋₁, xw₋₂ . . . xₖ]
 
-                    -- arithmetic:  an arithmetic right shift fill the left end with k repetitions of the most significant bit, giving a result [xw₋₁, xw₋₁, xw₋₁, . . . xₖ]
-                    
+                    -- arithmetic:  an arithmetic right shift fill the left end with k repetitions of the most significant bit, giving a result [xw₋₁, xw₋₁, xw₋₁, . . . xₖ]                    
                 
             • For signed numbers, arithmetic right shift must be used, and for unsigned numbers, logical right shift must be used.
 
@@ -170,7 +169,36 @@ CHAPTER 2:  REPRESENTING AND MANIPULATING INFORMATION
 
         D. Conversions Between Signed and Unsigned
 
-            •
+            • When casting between different numeric data types, the bit represenation stays the same, but they are interpreted differently (see encodings.c for an illustration of this).
+
+        E. Signed Versus Unsigned in C 
+
+            • Generally, most numbers are signed by default unless either declared with (unsigned) or by including the 'u' or 'U' suffix to the constant.
+
+            • As a general rule for casting unsigned to signed (w-bit) numbers, we can observe the following:
+
+                - signed value = unsigned value (if MSB = 0)
+                - signed value = unsigned value - 2ʷ (if MSB = 1)
+
+            • As a general rule for casting signed to unsigned (w-bit) numbers, we can observe the following:
+
+                - unsigned value = signed value (if signed value >= 0)
+                - unsigned value = signed value + 2ʷ (if signed value < 0)
+
+            • To convert an unsigned number to a larger datatype, we can simply add leading zeros to the representation (known as zero extension).
+
+            • To convert a two’s-complement number to a larger datatype, the rule is to perform a sign extension, adding copies of the most significant bit to the representation.
+
+                - example:  1101 0110 (-42) becomes sign-extended to 1111 1111 1101 0110
+
+            * See encodings.c for an example of sign extension.
+
+        F. Truncating numbers
+
+            • 
+
+
+
 
 
 
