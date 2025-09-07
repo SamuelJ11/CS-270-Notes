@@ -1,3 +1,137 @@
 CHAPTER 2:  REPRESENTING AND MANIPULATING INFORMATION
 
     I.  Information Storage
+
+        A. Hexadecimal Notation
+
+            • The value of a single byte can range from 00₁₆ to FF₁₆ 
+
+            • Numeric constants starting with 0x are interpreted as hexadecimal.
+
+            • To easily remember how to convert from decimal to hexadecimal, use the formula x₁₀ = 16.q + r.  Use this formula until q = 0, then starting from the first remainder
+              string together all remembers from right to left in the hexidecimal number:
+
+                - example:  740₁₀ = (16 * 46) + 4
+                            46₁₀ = (16 * 2) + 14
+                            2₁₀ = (16 * 0) + 2
+
+                            answer:  0x2E4
+
+            • To easily convert a hexadecimal number to decimal, simply multiply each hexadecimal degit by the appropriate power or 16:
+
+                - example:  0x2E4 = (16⁰ * 4) + (16¹ * 14) + (16² * 2) = 740
+
+        B. Data Sizes
+
+            • For a machine with a w-bit word size, the virtual addresses can range from 0 to 2ʷ - 1, giving the program access to 2ʷ bytes.
+
+            * See figure 2.3 on page 69 for the number of bytes typically allocated for different C data types
+
+            • Programmers should strive to make their programs portable across different machines and compilers.
+
+                - one aspect of portability is to make the program insensitive to the exact sizes of the different data types:
+
+                    -- pointer size = word size, so on 64-bit machines, pointers are 64 bits.
+
+                    -- int is only 32 bits, so when migrating a program designed on a 32-bit machine to a 64-bit machine, the 64-bit pointer is 
+                       truncated into a 32-bit int, causing bugs.
+
+        C. Addressing and Byte Ordering
+
+            • The address of a variable always points to the first (lowest) byte of that variable:
+
+                - example:  if a variable 'x' has an address of 0x100 (value of &x = 0x100), then the 4 bytes of x would be
+                            stored in memory locations 0x100, 0x101, 0x102, and 0x103.
+
+            • Some machines choose to store the object in memory from least signficant byte to most (little endian) while others choose to
+              store them from most significant byte to least (big endian).
+
+            • In C, the smallest addressable unit of memory is a byte.
+
+            * Try running bytes.c to see examples of byte representations for different data types.
+
+                - the least significant byte value of 0x39 is printed first (little endian)
+
+        D. Representing Strings
+
+            • A string in C is encoded (ASC II) by an array of characters terminated by the null "\0".
+
+                - if the show_bytes routing is run with the arguments "12345" and 6 (to include the terminating character), we get the result 31 32 33 34 35 00, 
+                  with the 00 denoting the null character at the end of the string.
+
+        E. Representing Code 
+
+            • Different machine types use different and incompatible instructions and encodings - binary code is seldom portable across different
+              combinations of machine and operating systems.
+
+        F. Introduction to Boolean Algebra
+
+            • The four basic bitwise operators are:
+
+                - AND (&)
+                - OR (|)
+                - XOR (^)
+                - NOT (~)
+
+            • We can extend the four Boolean operations to also operate on bit vectors, strings of zeros and ones of some fixed length 'w'.
+
+                - one useful application of bit vectors is to represent finite sets: 
+
+                    -- example:  assume A = {0, 3, 5, 6} and w = 8 (one byte), so our bit vector takes the form [Aw₋₁, Aw₋₂ . . . 1, 0]
+
+                                 let i = index of the bit vector, then Aᵢ = 1 in our bit vector if i ∈ A.
+
+                                 thus our bit vector encoding of A would be [01101001]
+
+        G. Bit-level Operations in C 
+
+            * See swap.c for an example of swapping two integer values using bitwise operations on pointer values.
+
+            • A common use of bit-level operations is to implement 'masking' operations, where a mask is a bit pattern tht indicates a selected set of bits within a word.
+
+                -- the mask 0xFF indicates the low-order byte of a word (when &'d with a number such as 0x89ABCDEF, this would yield 
+                   0x000000EF)
+
+        H. Logical Operations in C
+
+            • C provides a set of logical operators:
+
+                - (OR) ||
+                - (AND) &&
+                - (NOT) !
+
+            • Logical operations treat any non-zero argument as representing TRUE and any zero argument as FALSE, returning either 1 or 0 respectively.
+
+                - example:  0x69 || 0x55 = 0x01 (TRUE)
+
+        I. Shift Operations in C 
+
+            • C also provides a set of shift operations for shifting bit patterns to the left and to the right.
+
+                - example:  let k = 2 and the operand x = 00101101 (45).
+
+                            for an operand having a bit representation [xw₋₁, xw₋₂ . . . 1, 0], the expression x << k would shift each bit of x to the left by 2, and
+                            the rightmost positions get filled by zeroes:
+
+                            --  x = 10110100 (180)
+
+                            notice that left-shifting by n bits effectively multiplies the original value by 2ⁿ.  Hence 45 was multiplied by 2² to obtain 180.
+
+                - There are 2 forms of right-shifting:
+
+                    -- logical:  a logical right shift fills the left end with k zeroes, giving a result [0, 0, . . . xw₋₁, xw₋₂ . . . xₖ]
+
+                    -- arithmetic:  an arithmetic right shift fill the left end with k repetitions of the most significant bit, giving a result [xw₋₁, xw₋₁, xw₋₁, . . . xₖ]
+                    
+                
+            • For signed numbers, arithmetic right shift must be used, and for unsigned numbers, logical right shift must be used.
+
+    II. Integer Representations
+            
+
+             
+
+                    
+                    
+            
+                                

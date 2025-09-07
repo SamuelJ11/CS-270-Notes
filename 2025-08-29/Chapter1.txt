@@ -260,7 +260,7 @@ CHAPTER 1:  A TOUR OF COMPUTER SYSTEMS
 
     A.  Amdahl’s Law
 
-    • when we speed up one part of a system, the effect on the overall system performance depends on both how significant this part was and how much it sped up.
+    • When we speed up one part of a system, the effect on the overall system performance depends on both how significant this part was and how much it sped up.
 
       - let Tₒ = total execution time before any improvements are made
       - let Tₙ = total execution time after improvement
