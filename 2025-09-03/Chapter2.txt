@@ -127,6 +127,54 @@ CHAPTER 2:  REPRESENTING AND MANIPULATING INFORMATION
             • For signed numbers, arithmetic right shift must be used, and for unsigned numbers, logical right shift must be used.
 
     II. Integer Representations
+
+        A. Integral Data types
+
+            • The ranges of integral data types (ones that represent finite ranges of integers) are not symmetric:  the range of negative numbers extends one further than that
+              of positive numbers:
+
+                - [signed] char: −128 to 127
+                - unsigned char: 0 to 255
+                - short: −32,768 to 32,767
+                - unsigned short: 0 to 65,535
+                - int: −2,147,483,648 to 2,147,483,647
+                - unsigned int: 0 to 4,294,967,295
+                - long: −2,147,483,648 to 2,147,483,647
+                - unsigned long: 0 to 4,294,967,295
+                - int32_t: −2,147,483,648 to 2,147,483,647
+                - uint32_t: 0 to 4,294,967,295
+                - int64_t: −9,223,372,036,854,775,808 to 9,223,372,036,854,775,807
+                - uint64_t: 0 to 18,446,744,073,709,551,615
+
+            • Note that the above ranges are the 'typical' ranges, not the 'guaranteed' ranges (see textbook page 91 for more information on this).
+
+        B. Unsigned Encodings 
+
+            • The binary to unsigned encoding (B2Uw), where w = # of bits of the binary number, is defined as:
+
+                - Σ (from i = 0 to w-1)  xᵢ(2ⁱ)
+
+        C. Two's Complement Encodings
+
+            • The most common representation of signed numbers is two's complement.  The binary to two's complement encoding is defined as:
+
+                - −(xw₋₁).(2ʷ⁻¹) + Σ (from i = 0 to w-2)  xᵢ(2ⁱ)        *or you could just negate all bits and add 1.  be careful to ONLY do this if the MSB = 1; you don't need to do
+                                                                         this for positive numbers.
+
+            • Two’s-complement ranges are asymmetric because half of the bit patterns (with sign bit = 1) represent negative numbers, while the other half (sign bit = 0) represent nonnegative numbers.
+              Since zero is considered nonnegative, there is one fewer positive number than negative.
+
+              - the maximum unsigned value is slightly more than twice the maximum two’s-complement value: UMax = (2 * TMax) + 1.
+
+            * See encodings.c to get a better understanding of the two's complement representation
+
+        D. Conversions Between Signed and Unsigned
+
+            •
+
+
+
+
             
 
              
