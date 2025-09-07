@@ -195,7 +195,59 @@ CHAPTER 2:  REPRESENTING AND MANIPULATING INFORMATION
 
         F. Truncating numbers
 
-            • 
+            • When truncating an unsigned w-bit number to a k-bit number, we drop the high-order (w - k) bits and apply the following rule to obtain a truncated version of x (x'):
+
+                - let x = [xw₋₁, xw₋₂ . . . x₀​] 
+
+                - let x' = [xₖ₋₁, xₖ₋₂, . . . x₀]
+
+                - let y = B2U(x)    *B2U = binary-to-unsigned integer
+                
+                - then y' = y mod 2ᵏ
+
+                    -- example:  x = 11010011 and k = 4 (we are truncating x to 4 bits)
+
+                                 x' = 0011
+                                 y = B2U(x) = 211
+                                 y' = 211 % 2⁴ = 3
+
+                *an easier way is to simply remove the leading k bits from x and interpret x' as an unsigned integer
+
+            • When truncating a two's complement w-bit number to a k-bit number, we drop the high-order (w - k) bits and apply the following rule to obtain a truncated version of x (x'):
+
+                - let x = [xw₋₁, xw₋₂ . . . x₀​] 
+
+                - let x' = [xₖ₋₁, xₖ₋₂, . . . x₀]
+
+                - let y = B2T(x)    *B2T = binary-to-signed integer
+                
+                - then y' = y % 2ᵏ
+
+                    -- example:  x = 11011011 and k = 4 (we are truncating x to 4 bits)
+                                     
+                                 x' = 1011
+                                 y = B2T(x) = -37
+                                 y' = -37 % 2⁴ = -5
+
+                *an easier way is to simply remove the leading k bits from x and interpret x' as a signed integer
+
+            • In encodings.c, the truncation process went as followed:
+
+                - x = 0000 0000 0000 0000 1100 1111 1100 0111 (53191) and k = 16
+
+                - x' = 1100 1111 1100 0111
+                
+                - y = BTU(x) = 1111 1111 1111 1111 1100 1111 1100 0111
+
+                - y' = y % 2¹⁶ = 1100 1111 1100 0111 (-12345)
+
+            
+
+
+                                 
+
+
+            
 
 
 

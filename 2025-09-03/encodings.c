@@ -13,7 +13,7 @@ void show_bytes(byte_pointer start, size_t len)     // size_t is a data type (an
 
 int main()
 {
-            // NEGATION
+                // NEGATION
 
     short x = 12345;
     short mx = -x;
@@ -21,7 +21,7 @@ int main()
     show_bytes((byte_pointer)&x, sizeof(short));
     show_bytes((byte_pointer)&mx, sizeof(short));
 
-            // CASTING
+                // CASTING
 
     printf("\n");
 
@@ -35,7 +35,7 @@ int main()
 
     printf("\n");
 
-            // SIGNED VS UNSIGNED INTERPRETATION.
+                // SIGNED VS UNSIGNED INTERPRETATION.
 
     printf("w: %d\nuw: %u\n", w, uw);
 
@@ -47,7 +47,7 @@ int main()
     printf("x2 = unsigned: %u = signed: %d\n", x2, x2);
     printf("u2 = unsigned: %u = signed: %d\n\n", u2, u2);
 
-            // SIGN EXTENSION
+                // SIGN EXTENSION
 
     short sX = -12345;             // -12345 
     unsigned short usX = sX;       // 53191 
@@ -62,6 +62,18 @@ int main()
 
     printf("X = %d:\t", X);
     show_bytes((byte_pointer) &X, sizeof(int));
+
+    printf("\n");
+
+                // TRUNCATING NUMBERS
+
+    int x3 = 53191;
+    short sx3 = (short)x3; 
+    int y2 = sx3; 
+
+    printf("x3 = %d\n", x3); 
+    printf("sx3 = %d\n", sx3);
+    printf("y2 = %d\n", y2);
 
     return 0;
 }
