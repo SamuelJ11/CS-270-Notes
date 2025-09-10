@@ -1,0 +1,1 @@
+1. asked a question regarding disk vs main memory in the architecture overview slide.
