@@ -1,0 +1,107 @@
+CHAPTER 3: Machine-Level Representation of Programs
+
+    I.  A Historical Perspective
+
+        • The GCC compiler generates its ouput in the form of assembly code, then invokes both an assembler and a linker to generate the executable
+          machine code from the assembly code
+
+        
+
+        • The intel processor line known as x86 had implemented backwards compatibility with each successive iteration of its processors since 1978.
+
+            - there are many strange artifacts in the instruction set due to this evolutionary heritage
+
+        • Intel’s early CPUs were named with numbers ending in “86” (8086, 80286, i386, i486).
+
+        • After the i486, Intel switched naming schemes (e.g., “Pentium”), but people still used x86 as a shorthand for the whole line.
+
+    II. Program Encodings
+
+        • The gcc command invokes the gcc C compiler (default compiler for Linux systems)
+
+        • The command line option -Og instructs the compiler to apply a level of optimization that yeilds machine code that follows
+              the overall structure of the original source code:
+
+            - it is a special option meant for debugging and learning (applies some optimizations but you can still see the relationship between the source code and machine code)
+
+        • The sequence of executions of the gcc command is as follows:
+
+            - (1) the C preprocessor expands the source code to include any files specified with #include and macro (#define) declaration
+
+            - (2) the compiler generates assembly code versions of the source file(s) with the .s suffix
+
+            - (3) the assembler converts the assembly code into binary object-code files with the .o suffix
+
+                -- these files contain binary representations of all the instructions, but the global variables are not yet filled in
+
+            - (4) the linker merges these object-code files along with code implementing library functions and generates the final excecutable
+                  with the name specified by the -o command.
+
+            A. Machine Level Code
+
+                • computer systems employ several different forms of abstraction, hiding details of an implementation through the use of a simpler abstract model.
+
+                    - (1) the format and behavior oof a machine-level program is defined by the instruction set architecture (ISA)
+
+                         -- even though the CPU runs things in parallel, it has to preserve the illusion that instructions ran one by one, in order
+
+                         -- this means the observable behavior (the values in registers, memory, etc.) will always match the sequential model defined by the ISA.
+
+                    - (2) the memory addresses used by a machine-level program are virtual addresses:
+
+                        -- when a program runs, it thinks it has access to one big, continuous block of memory (like a huge array of bytes starting at address 0),
+                           called virtual addresses.
+
+                        -- The actual implementation of the memory system involves a combination of multiple hardware memories and operating system software
+
+                • The machinecode forx86-64 differs greatly from the original C code. Parts of the processor state are visible that normally are hidden from the C programmer:
+
+                    - the program counter (PC and %rip in x86-64) indicates the address in memory of the next instruction to be executed
+
+                    - the integer register file contains 16 named locations storing 64-bit values that correspond to addresses (C pointers) or integer data
+
+                    - the condition code registers hold status information about the most recently executed arithmetic or logical instruction (used to implement conditional changes 
+                      like if-else and while statements)
+
+                    - (3) a set of vector registers can each hold one or more integer or floating-point values
+
+                • The program memory is addressed using virtual addresses  of which only a limited subrange are available (upper n-bits set to 0)
+
+                    - the operating system manages this virtual address space, translating vitual addresses into the physical addresses of values actually strored in processor memory.
+
+            B. Code Examples
+
+                • The -S flag was used to tell the gcc compiler to generate an assembly file mstore.s but go no further
+
+                • The assembly code file contains various declarations, including the code block shown below:
+
+                    - multstore:
+                        pushq	%rbx                      
+                        movq	%rdx, %rbx
+                        call	mult2@PLT
+                        movq	%rax, (%rbx)
+                        popq	%rbx
+                        ret
+
+                • Each line in the code corresponds to a single machine instruction:
+
+                    - for example, the pushq instruction indicates the contents of register %rbx should be pushed onto the program stack
+
+                • Using the -c flag, gcc will both compile and assemble the Code
+
+                • To actually inspect the contents of machine-code files, a class of programs known as disassemblers can be invaluable
+
+                    - the program OBJDUMP can serve this role given the -d command-line flag after the object file has been created (objdump -d mstore.o) which yeilds the following:
+
+                        0000000000000000 <multstore>:
+                            0:   f3 0f 1e fa             endbr64
+                            4:   53                      push   %rbx
+                            5:   48 89 d3                mov    %rdx,%rbx
+                            8:   e8 00 00 00 00          call   d <multstore+0xd>
+                            d:   48 89 03                mov    %rax,(%rbx)
+                            10:   5b                     pop    %rbx
+                            11:   c3                     ret
+
+                    - On the left are the 14 hexadecimal byte values that each encode the relevant instruction
+
+                    - On the right is the corresponding assembly language
