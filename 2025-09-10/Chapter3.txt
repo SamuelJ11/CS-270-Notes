@@ -334,6 +334,115 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
 
     V. Arithmetic and Logical Operations
 
+        • Aside from the MOV class, there are several other classes of arithmetic operations:
+
+            - ADD(S, D)     
+            - SUB(S, D)
+            - IMUL(S, D)
+            - XOR(S, D)
+            - OR(S, D)
+            - AND(S, D)
+            - NOT(S)        *bitwise negation of each bit
+            - NEG(S)        *Computes the two’s complement of the operand.
+            - SAL(k, D)     *left shift by k, same as SHL(k, D)
+            - SAR(k, D)     *artihmetic right shift by k
+            - SHR(k, D)     *logical right shfit by key
+
+        • Each of the above operations has instructions for operating on the four sizes of data (b, w, l, q).
+
+        A. Load Effective Address
+
+            • The load effective address address instruction (leaq) is a vairant of the movq instruction
+
+                - leaq has the form of an instruction that reads from memory to a register, but it does not reference memory at all
+
+                    -- its first operand apprears to be a memory reference, but instead of reading from the designated location, the instruction copies the effective address to the desination.
+
+                    *  the register doesn’t get the value stored at that memory address, but rather the computed address itself.
+
+            • For the reason described above, leaq can be used to compactly describe common arithmetic operations:
+
+                - conceptually, both operations do the same 4 calculations
+
+                    (1) movq %rbx, %rax
+                    (2) imulq $4, %rdx, %rdx
+                    (3) addq %rdx, %rax
+                    (4) addq $7, %rax
+
+                - movq  7(%rdx,%rdx,4), %rax has two additional steps after the four operations:
+
+                    "compute the effective address (steps 1 - 4) → go to memory at that address → fetch the value (memory dereference) → put them into %rax"
+
+                - leaq 7(%rdx,%rdx,4), %rax is only one instruction:
+
+                    "compute the effective address (steps 1 - 4) → drop that number directly into %rax"
+
+            * See lines 9 - 11 in leaq.s for an example of the leaq instructions performed by the funciton in leaq.c
+
+        B. Unary and Binary Operations
+
+            • Unary operations only have a single operand serving as both the source and destination
+
+            • Binary operations have the operand order of (S, D)
+
+                - subq(%rax, %rdx) is read as "subtract the value of %rax from %rdx
+
+        C. Shift Operations
+
+            • The final group consists of shift operations, where the shift amount is given first and the value to shift is given second (k, D).
+
+            • The different shift instructions can specify the shift amount either as an immediate value or with the single-byte register %cl:
+
+                - With x86-64, data values that are w bits are shifted by the low-order m bits of register %cl, where m = log₂(w)
+                  
+                    -- for example, if %cl = 0xAB and the width of %ax = 16, the operation salw(%cl, %ax):
+
+                       leftshifts %rax by the first 4 bits (log₂(16) = 4) of %cl, and since the first 4 bits of %cl are 1011, 
+                       %ax would be left shifted by 11 bits. 
+
+                    -- because only the low 4 bits of %cl were used, the higher order bits of %cl were ignored
+
+        D. Discussion
+
+            • Compilers often store multiple program values in registers and move values between registers to compute results.
+
+            • One can clear a register by XOR'ing the contents of a register with itself (xorq %rax, %rax)
+
+                - this saves us from having to store an immediate (0) in memory
+
+        E. Special Arithmetic Operations
+
+            • Sometimes we need to multiply two 64-bit numbers and get the full 128-bit result, because a 64-bit number multiplied by another 64-bit number can be as big as 128 bits.
+
+                - to handle this, x86-64 treats %rdx:%rax as a single 128-bit “oct word”, where:
+
+                    -- %rax stores the low 64 bits of the product
+
+                    -- %rdx stores the high 64 bits of the product
+
+                - imulq can work in two forms:
+
+                    -- two-operand form: multiply two 64-bit numbers → truncate result to 64 bits
+
+                    -- one-operand form (full 128-bit multiply): %rax contains the first operand, and the instruction source is the second operand
+
+                    -- result goes into %rdx:%rax (high64:low64 128 bits)
+
+                - mulq is similar but unsigned multiplication
+
+                - idivq (signed) and divq (unsigned) work the same way as imulq and mulq but for division:
+
+                    -- the quotient is stored in register %rax and the remainder in register %rdx.
+
+                - cqto (-o for oct word) is used for division; it sign-extends %rax into %rdx:%rax so you can divide a full 128-bit value.
+
+
+
+
+
+                 
+                         
+
 
 
 
