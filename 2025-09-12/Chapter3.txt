@@ -1,0 +1,56 @@
+CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
+
+    X.  Combining Control and Data in Machine-Level Programs
+
+        A. Understanding Pointers
+
+            • Every pointer has an associated type (int, char, etc)
+
+                - int *ip: a pointer to an object of type int
+
+                - char **cpp: a pointer to a pointer to an object of type char
+
+                - void *: generic pointer, cannot directly dereference because the compiler doesn’t yet know the size of the object it points to
+
+            • Every pointer has a value, which is an address of some object of the designated type
+
+                -- The special NULL value indicates that the pointer does not point anywhere.
+
+            
+            • Pointers are created with the ‘&’ operator
+
+            • Pointers are dereferenced with the ‘*’ operator. 
+
+            • Arrays and pointers are closely related:
+
+                - array referencing has the exact same effect as pointer arithmetic and dereferencing
+
+                    -- A[3] = *(A + (3 * i)) 
+
+                    * the 3 here means index by three, and the 'i' corresponds the scalar value (size of A's data type)
+                    
+                    * so if A[] is of type int, the second expression takes the base address of A (A[0]) and adds 3 * 4 (i = 4 bytes for an int) to it 
+                      to get the address of the fourth element
+
+            • Casting from one type of pointer to another changes its type but not its value.
+
+                - Pointer arithmetic depends on type:  p + i = p + i*(sizeof(p))
+
+                    -- example 1:  char* p = p
+
+                                   (int*) p + 7 = p + 7(4) = p + 28
+
+                                   (int*) (p + 7) = p + 7(1) = p + 7
+
+                    * casting has higher precedence than addition
+
+            • Pointers can also point to functions.
+
+                - This provides a powerful capability for storing and passing references to code.
+
+                    --
+                    
+
+
+
+            
