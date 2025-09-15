@@ -124,16 +124,22 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
         E. Supporting Variable-Size Stack Frames
 
             • Below is a detailed walkthrough of a function that creates a variable sized array. 
+            
+                * see vframe.c to test the function below with some values
+
+                // C code
 
                 long vframe(long n, long idx, long *q) 
                 {
-                long i;
-                long *p[n];
-                p[0] = &i;
-                for (i = 1; i < n; i++)
-                    p[i] = q;
-                return *p[idx];
+                    long i;
+                    long *p[n];
+                    p[0] = &i;
+                    for (i = 1; i < n; i++)
+                        p[i] = q;
+                    return *p[idx];
                 }
+
+                // Assembly Code
 
                 1 vframe:
                 2 pushq %rbp
