@@ -62,18 +62,17 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
 
             • For an illustrative example, reference the code in gets.c and consider the character array called buf[8] that can store at most 7 characters:
             
-            
-                Top of stack (%rsp at start)
-                +---------------------+
-                | buf[0..7]    (8B)   |
-                +---------------------+
-                | unused space (16B)  |     
-                +---------------------+
-                | return address      |
-                +---------------------+
-                | saved registers     |
-                +---------------------+
-                Bottom of stack
+                Stack Bottom (Higher Addresses)                                   
+                    +---------------------+
+                    |  saved registers    |  
+                    +---------------------+
+                    |  return address     |  
+                    +---------------------+
+                    |  unused space (16B) |  
+                    +---------------------+
+                    | buf[0..7]   (8B)    |  
+                    +---------------------+
+                Stack Top (%rsp) (Lower Addresses)                
 
                 - 24 bytes are allocated on the stack for buf[8]
                 - the 16 bytes between `buf` and the stored return pointer are not used. As long as the user types at most seven characters, the string returned by `gets` 
@@ -125,7 +124,7 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
 
             • Below is a detailed walkthrough of a function that creates a variable sized array. 
             
-                * see vframe.c to test the function below with some values
+                * see 'vframe.c' to test the function below with some values
 
                 // C code
 
@@ -245,7 +244,7 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
                     * **Purpose:** Returns control to the calling function.       
 
 
-                Stack Top (Higher Addresses)
+                Stack Bottom (Higher Addresses)
                 +---------------------+
                 |   Return address    |  <--- (Caller's frame starts here)
                 +---------------------+
@@ -261,7 +260,7 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
                 +---------------------+
                 |                     |
                 +---------------------+  <--- %rsp (Stack Pointer)
-                Stack Bottom (Lower Addresses)                          
+                Stack Top (Lower Addresses)                          
                 
 
 
