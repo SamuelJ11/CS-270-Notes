@@ -106,7 +106,6 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
             
                 - thus, even if many machines are running identical code, they would all be using different stack addresses.
 
-
             • Recent versions of gcc incorporate a mechanism known as a stack protector into the generated code to detect buffer overruns. 
             
                 - the idea is to store a special canary value in the stack frame between any local buffer and the rest of the stack state
