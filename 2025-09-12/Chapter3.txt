@@ -48,7 +48,159 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
 
                 - This provides a powerful capability for storing and passing references to code.
 
-                    --
+                    -- see funcpointer.c for an example of how this works
+
+                - The value of a function pointer is the address of the first instruction in the machine-code representation of the function.
+
+        B. Life in the Real World: Using the GBD Debugger
+
+            • See page 308 for useful gdb commands that help when working with machine-level x86-64 programs
+
+                - it is very helpful to first run objdump to get a disassembled version of the program
+
+        C. Out-of-Bounds Memory References and Buffer Overflow
+
+            • For an illustrative example, reference the code in gets.c and consider the character array called buf[8] that can store at most 7 characters:
+            
+            
+                Top of stack (%rsp at start)
+                +---------------------+
+                | buf[0..7]    (8B)   |
+                +---------------------+
+                | unused space (16B)  |     
+                +---------------------+
+                | return address      |
+                +---------------------+
+                | saved registers     |
+                +---------------------+
+                Bottom of stack
+
+                - 24 bytes are allocated on the stack for buf[8]
+                - the 16 bytes between `buf` and the stored return pointer are not used. As long as the user types at most seven characters, the string returned by `gets` 
+                  (including the terminating null) will fit within the space allocated for `buf`
+                - however, if the string is longer, `gets` will overwrite some of the information stored on the stack. 
+                  As the string gets longer, the following information will be corrupted:
+
+                    -- 0–7 none
+                    -- 9–23 unused stack space
+                    -- 24–31 return address
+                    -- 32+ saved state in caller
+
+            • Unfortunately, a number of commonly used library functions, including strcpy, strcat, and sprintf, can generate a sequence of bytes without any indication 
+              of the size of the destination buffer. 
+            
+                - such conditions can lead to vulnerabilities to buffer overflow.
+
+            * Run the excecutable file 'getline' with the gdb debugger to see how buffer overflow occurs in real time
+
+            • Buffer overflow attacks can be dangerous because a pernicious attacker can purposely overwrites adjacent memory on the stack, including the saved return address:
+
+                - When the current function tries to return, the CPU jumps to an arbitrary memory location where the malicious code is executed
+
+        D. Thwarting Buffer Overflow Attacks
+
+            • In order to insert exploit code into a system, the attacker needs to inject both the code as well as a pointer to this code as part of the attack string
+
+                - generating this pointer requires knowing the stack address where the string will be located.
+            
+            • The idea of stack randomization is to make the position of the stack vary from one run of a program to another. 
+            
+                - thus, even if many machines are running identical code, they would all be using different stack addresses.
+
+
+            • Recent versions of gcc incorporate a mechanism known as a stack protector into the generated code to detect buffer overruns. 
+            
+                - the idea is to store a special canary value in the stack frame between any local buffer and the rest of the stack state
+
+                - if a buffer overflow overwrites the return address, it usually also overwrites the canary
+
+                - before the function returns, it checks the canary: if the canary is different, it knows a buffer overflow occurred and aborts execution
+
+            • Modern systems mark memory pages with separate permissions (read, write, execute). Marking the stack/data as non-executable (the NX / DEP feature) prevents code 
+              injected into those regions from being run directly.
+
+                - this stops the simplest form of code-injection attacks because if the stack/data pages aren’t executable, those injected bytes can’t be jumped to and executed.
+
+        E. Supporting Variable-Size Stack Frames
+
+            • Below is a detailed walkthrough of a function that creates a variable sized array. 
+
+                long vframe(long n, long idx, long *q) 
+                {
+                long i;
+                long *p[n];
+                p[0] = &i;
+                for (i = 1; i < n; i++)
+                    p[i] = q;
+                return *p[idx];
+                }
+
+                // allocating space for local variables and array
+                // n in %rdi, idx in %rsi, q in %rdx
+
+                1 vframe:
+                2 pushq %rbp
+                3 movq %rsp, %rbp
+                4 subq $16, %rsp
+                5 leaq 22(,%rdi,8), %rax
+                6 andq $-16, %rax
+                7 subq %rax, %rsp
+                8 leaq 7(%rsp), %rax
+                9 shrq $3, %rax
+                10 leaq 0(,%rax,8), %r8                      
+                11 movq %r8, %rcx
+
+                // code for loop initialization
+                // i in %rax and on stack, n in %rdi, p in %rcx, q in %rdx
+
+                12 .L3:
+                13 movq %rdx, (%rcx,%rax,8)
+                14 addq $1, %rax
+                15 movq %rax, -8(%rbp)
+                16 .L2:
+                17 movq -8(%rbp), %rax
+                18 cmpq %rdi, %rax
+                19 jl .L3
+
+                // code for function exit
+                20 leave
+                21 ret    
+
+                // visual representation
+                                                            
+                Stack Top (Higher Addresses)
+                +---------------------+
+                |   Return address    |  <--- (Caller's frame starts here)
+                +---------------------+
+                |     Saved %rbp      |  <--- %rbp (Frame Pointer)
+                +---------------------+
+                |         i           |  <--- %rbp - 8
+                +---------------------+
+                |      (Unused)       |  <--- %rbp - 16
+                +---------------------+
+                |                     |
+                |         p           |  (Variable-size array, 8n bytes)
+                |                     |
+                +---------------------+
+                |                     |
+                +---------------------+  <--- %rsp (Stack Pointer)
+                Stack Bottom (Lower Addresses)                                      
+                
+
+
+
+
+                                    
+
+
+
+
+
+                                  
+
+
+
+            
                     
 
 

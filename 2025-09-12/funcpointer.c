@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include <stdio.h>
-
 int fun(int x, int *p)
 {
     *p = x; // store x into the memory pointed by p
