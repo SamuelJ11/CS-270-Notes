@@ -59,7 +59,7 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
 
         C. Out-of-Bounds Memory References and Buffer Overflow
 
-            • For an illustrative example, reference the code in gets.c and consider the character array called buf[8] that can store at most 7 characters:
+            • For an illustrative example, reference the code in 'gets.c' and consider the character array called buf[8] that can store at most 7 characters:
             
                 Stack Bottom (Higher Addresses)                                   
                     +---------------------+

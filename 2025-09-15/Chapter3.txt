@@ -1,0 +1,103 @@
+CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
+
+    VI. Control
+
+    • Normally statements are executed sequentially (in the order they appear), but this order can be altered with a jump instruction (usually contingent upon the result of some test)
+
+    A. Condition Codes  
+
+        • In addition to the general purpose registers, the CPU maintains a set of single-bit condition code registers which are tested to perform conditional branches
+
+            - Carry flag        (The most recent operation generated a carry out of the most significant bit)
+            - Zero flag         (The most recent operation yielded zero)
+            - Sign flag         (The most recent operation yielded a negative value)
+            - Overflow flag     (The most recent operation caused a two’s-complement overflow)
+
+        • For the logical operations, such as xor, the carry and overflow flags are set to zero. 
+        
+        • For the shift operations, the carry flag is set to the last bit shifted out, while the overflow flag is set to zero.
+
+        • There are two instruction classes (having -b, -w, -l, -q forms) that set condition codes without altering any other registers:
+
+            - the CMP instructions set the condition codes according to the difference of their two operands (D - S) - they set the zero flag if the two operands are equal
+
+            - the TEST instructions behave in the same manner as the AND instructions except without altering their destination
+
+    B. Accessing the Condition Codes
+
+        • The SET instruction class allows us to set a single byte to 0 or 1 depending on some combination of the condition codes
+
+            - IMPORTANT!!:  the suffixes for these conditions do NOT specify operand sizes
+
+            - see page 231 for the flags checked for set operations
+
+        • A SET instruction has either one of the low-order single-byte register elements or a single-byte memory location as its destination, setting this byte to either 0 or 1
+        
+            - for example, if we wanted to check if a < b:
+
+            (a in %rdi, b in %rsi)
+
+            comp:
+                cmpq %rsi, %rdi     (a - b)
+                setl %al            (if SF ^ OF, set low-order byte of %eax (%ax) to 1)
+                movzbl %eax         (clears remaining bits of %eax **and %rax**)  ** In x86-64, any instruction that writes to a 32-bit register will automatically zero out 
+                ret                                                                  the upper 32 bits of the corresponding 64-bit register
+
+        • It is important to note how machine code does or does not distinguish between signed and unsigned values
+
+            - some circumstances require different instructions to handle signed and unsigned operations, such as using different versions of right shifts, div and mult instructions, etc
+
+
+    C. Jump Instructions
+
+        • Two of the jmp instruction jump unconditionally - it can be either a direct or indirect jump:
+
+            - direct jumps use labels: jmp .L1
+
+            - indirect jumps use the * followed by an operand specifier: jmp *%rax (uses the value in %rax as the jump target) 
+
+        • The remaining jumps are conditional, and these jumps require a label, i.e. they can only be direct (see textbook page 234 for examples)
+
+    D. Jump Instruction Encodings
+
+        • The two most common types of encodings for the jmp instruction are PC relative and absolute jumps:
+
+            - PC relative:  encodes the difference between the address of the target instruction and the address of the instruction immediately following the jump
+
+                -- these offsets can be encoded using 1, 2 or 4 bytes
+
+            - Absolute:  4 bytes are used to directly specify the target
+
+        • The assembler and linker select the appropriate encodings for the jmp instruction
+
+        • Consider the following example below:
+
+            1 movq %rdi,%rax
+            2 jmp .L2
+            3 .L3:
+            4 sarq %rax
+            5 .L2:
+            6 testq %rax,%rax
+            7 jg .L3
+            8 rep;ret
+
+            // disassembled version of the above machine code
+            
+            1 0: 48 89 f8     mov %rdi,%rax
+            2 3: eb 03        jmp 8 <loop+0x8>  
+            3 5: 48 d1 f8     sar %rax         
+            4 8: 48 85 c0     test %rax,%rax
+            5 b: 7f f8        jg 5<loop+0x5>
+            6 d: f3 c3        repzretq
+
+            - in the disassembled code, the first jump starts at address 0x3, with the next address at 0x5 
+
+            - the offset for the first jump (0x3) is calculated as the (address of the target (0x8)) - (the address of the next instruction (0x5))  
+
+            - the second jump starts at address 0xb, with the next address at 0xd
+
+            - the offset for the second (0xf8) jump is subsequently calculated as (0x5 - 0xd)   *0x5 − 0xd = -8, written as 0xf8 in two’s complement.
+
+    E. Implementing Conditional Branches with Conditional Control
+
+                
