@@ -131,13 +131,13 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
        
             C code                                             Assembly
             ------------------------------------------------   ----------------------------------------
-            long absdiff_se(long x, long y) {                  absdiff_se:          # x in %rdi, y in %rsi
-                long result;                                   cmpq %rsi, %rdi      # Compare x:y
-                if (x < y) {                                   jge .L2              # If >= goto x_ge_y
-                    lt_cnt++;                                  addq $1, lt_cnt(%rip) # lt_cnt++
+            long absdiff_se(long x, long y) {                  absdiff_se:              # x in %rdi, y in %rsi
+                long result;                                   cmpq %rsi, %rdi          # Compare x:y
+                if (x < y) {                                   jge .L2                  # If >= goto x_ge_y
+                    lt_cnt++;                                  addq $1, lt_cnt(%rip)    # lt_cnt++
                     result = y - x;                            movq %rsi, %rax
-                }                                              subq %rdi, %rax      # result = y - x
-                else {                                         ret                  # Return
+                }                                              subq %rdi, %rax          # result = y - x
+                else {                                         ret                      # Return
                                                             .L2:
                     ge_cnt++;                                  addq $1, ge_cnt(%rip) # ge_cnt++
                     result = x - y;                            movq %rdi, %rax
@@ -170,18 +170,18 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
 
             Instruction   Synonym    Condition (flags)                   Meaning
             ---------------------------------------------------------------------------
-            cmove   S,R   cmovz         S,R  ZF                          Equal / zero
-            cmovne  S,R   cmovnz        S,R ~ZF                          Not equal / not zero
+            cmove   S,R   cmovz         ZF                               Equal / zero
+            cmovne  S,R   cmovnz        ~ZF                              Not equal / not zero
             cmovs   S,R                 SF                               Negative
             cmovns  S,R                 ~SF                              Nonnegative
             cmovg   S,R                 ~(SF ^ OF) & ~ZF                 Greater (signed >)
-            cmovge  S,R   cmovnl        S,R ~(SF ^ OF)                   Greater or equal (signed >=)
+            cmovge  S,R   cmovnl        ~(SF ^ OF)                       Greater or equal (signed >=)
             cmovl   S,R                 (SF ^ OF)                        Less (signed <)
-            cmovle  S,R   cmovnle       S,R (SF ^ OF) | ZF               Less or equal (signed <=)
+            cmovle  S,R   cmovnle       (SF ^ OF) | ZF                   Less or equal (signed <=)
             cmova   S,R                 ~CF & ~ZF                        Above (unsigned >)
-            cmovae  S,R   cmovnb        S,R ~CF                          Above or equal (unsigned >=)
+            cmovae  S,R   cmovnb        ~CF                              Above or equal (unsigned >=)
             cmovb   S,R                 CF                               Below (unsigned <)
-            cmovbe  S,R   cmovna        S,R CF | ZF                      Below or equal (unsigned <=)
+            cmovbe  S,R   cmovna        CF | ZF                          Below or equal (unsigned <=)
 
             - the source and destination values can be 16, 32 or 64 bits 
             
@@ -196,6 +196,11 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
                                 t = test-expr;
                                 if (!t) v = ve;
 
+        • Not all conditional expressions can be compiled using conditional moves
+
+            - if either of these two expressions could potentially cause an error or have a side effect, this could result in invalid behavior
+
+    G. Loops
         
 
 
