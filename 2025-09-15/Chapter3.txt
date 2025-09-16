@@ -47,7 +47,6 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
 
             - some circumstances require different instructions to handle signed and unsigned operations, such as using different versions of right shifts, div and mult instructions, etc
 
-
     C. Jump Instructions
 
         • Two of the jmp instruction jump unconditionally - it can be either a direct or indirect jump:
@@ -100,4 +99,108 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
 
     E. Implementing Conditional Branches with Conditional Control
 
-                
+        • The most general way to translate conditional and unconditional expessions and statements from C into machine code is to use a combination of conditional and 
+          unconditional jumps
+
+        • Assembly doesn’t have 'if-else' directly: it only has conditional jumps, so compilers usually follow this template:         
+
+            t = test-expr;    // evaluate expression
+            if (!t)           // if test-expr == 0 (false) ...
+                goto false;   // jump to the false branch
+
+            then-statement    // if we didn’t jump, that means t != 0, so execute the "then" branch
+
+            goto done;        // skip over the else branch
+
+            false:
+            else-statement
+
+            done:
+
+    F. Implementing Conditional Branches with Conditional Moves
+
+        • The conventional way to implement conditional operations is through a conditional transfer of control:
+
+            - use a branching to jump to different code depending on the condition
+
+        • A more efficient strategy  is through a conditional transfer of data:
+
+            - compute both possible results, then use a special instruction to select the correct one without branching.
+
+        •  Compare both forms of C code and thier corresponding machine code representations to see how conditional data transfers are more efficient:
+       
+            C code                                             Assembly
+            ------------------------------------------------   ----------------------------------------
+            long absdiff_se(long x, long y) {                  absdiff_se:          # x in %rdi, y in %rsi
+                long result;                                   cmpq %rsi, %rdi      # Compare x:y
+                if (x < y) {                                   jge .L2              # If >= goto x_ge_y
+                    lt_cnt++;                                  addq $1, lt_cnt(%rip) # lt_cnt++
+                    result = y - x;                            movq %rsi, %rax
+                }                                              subq %rdi, %rax      # result = y - x
+                else {                                         ret                  # Return
+                                                            .L2:
+                    ge_cnt++;                                  addq $1, ge_cnt(%rip) # ge_cnt++
+                    result = x - y;                            movq %rdi, %rax
+                }                                              subq %rsi, %rax      # result = x - y
+                return result;                                 ret                  # Return
+            }                                                 
+
+            C code                                             Assembly
+            ------------------------------------------------   ----------------------------------------
+            long absdiff(long x, long y) {                     absdiff:             # x in %rdi, y in %rsi
+                long result;                                   movq %rsi, %rax      # rax = y
+                if (x < y)                                     subq %rdi, %rax      # rval = y - x
+                    result = y - x;                            movq %rdi, %rdx      # rdx = x
+                else                                           subq %rsi, %rdx      # eval = x - y
+                    result = x - y;                            cmpq %rsi, %rdi      # Compare x:y
+                return result;                                 cmovge %rdx, %rax    # If >=, rval = eval
+            }                                                  ret                  # Return
+
+        • Modern Processors use pipelining, where an instruction is broken into stages, each performing one small portion of the required operation
+
+            - multiple stages can thus be overlapped in the pipeline, but to do this requires being able to determine the sequence of instructions to be executed well ahead of time
+
+                -- the processor cannot do this when it encounters a conditional jump: the branch condtion must be evaluated first
+            
+            - modern CPU's can guess the outcome of a branch with around %90 accuracy, but if the guess is wrong, all instructions loaded along the wrong path must be discarded
+
+                -- this misprediction can incur a serious performance penalty
+
+        • Below is a figure showing the condtional move insructions:
+
+            Instruction   Synonym    Condition (flags)                   Meaning
+            ---------------------------------------------------------------------------
+            cmove   S,R   cmovz         S,R  ZF                          Equal / zero
+            cmovne  S,R   cmovnz        S,R ~ZF                          Not equal / not zero
+            cmovs   S,R                 SF                               Negative
+            cmovns  S,R                 ~SF                              Nonnegative
+            cmovg   S,R                 ~(SF ^ OF) & ~ZF                 Greater (signed >)
+            cmovge  S,R   cmovnl        S,R ~(SF ^ OF)                   Greater or equal (signed >=)
+            cmovl   S,R                 (SF ^ OF)                        Less (signed <)
+            cmovle  S,R   cmovnle       S,R (SF ^ OF) | ZF               Less or equal (signed <=)
+            cmova   S,R                 ~CF & ~ZF                        Above (unsigned >)
+            cmovae  S,R   cmovnb        S,R ~CF                          Above or equal (unsigned >=)
+            cmovb   S,R                 CF                               Below (unsigned <)
+            cmovbe  S,R   cmovna        S,R CF | ZF                      Below or equal (unsigned <=)
+
+            - the source and destination values can be 16, 32 or 64 bits 
+            
+            - the assembler can determine the operand length of a conditonal move from the name of the destination register 
+
+        • In conditional data transfer, both expressions are computed first, and the result is chosen with a conditional:
+
+            - model:  v= test-expr ? then-expr : else-expr;
+
+            - implementation:   v = then-expr;
+                                ve = else-expr;
+                                t = test-expr;
+                                if (!t) v = ve;
+
+        
+
+
+
+        
+                                                                 
+
+
