@@ -15,7 +15,6 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
             • Every pointer has a value, which is an address of some object of the designated type
 
                 -- The special NULL value indicates that the pointer does not point anywhere.
-
             
             • Pointers are created with the ‘&’ operator
 
@@ -229,8 +228,7 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
                 * **Line 19:** `jl .L3`
                     * **Action:** if `i` is less than `n`, the program jumps back to the `.L3` label to continue the loop.
 
-                ---
-
+                    
                 ### **Function Epilogue: Cleaning Up and Returning**
 
                 * **Line 20:** `leave`
