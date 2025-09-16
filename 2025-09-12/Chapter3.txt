@@ -163,83 +163,78 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
                 21 ret         
 
                 
-                This is a detailed, line-by-line explanation of the x86-64 assembly code generated for the `vframe` function, designed for readability in a plain text file.
+                // Function Prologue: Setting Up the Stack Frame
 
-                -------------------------------------------------------------------------------------------------------------------------------------------------------------
+                vframe:
+                This is the label for the start of the vframe function. The function arguments are passed via registers: n in %rdi, idx in %rsi, and q in %rdx.
 
-                ### **Function Prologue: Setting Up the Stack Frame**
+                Line 2: pushq %rbp
+                Action: Pushes the current value of the base pointer (%rbp) onto the stack.
+                Purpose: This saves the caller's frame pointer, as %rbp is a callee-saved register.
 
-                * **`vframe:`**
-                    * This is the label for the start of the `vframe` function.
-                    * The function arguments are passed via registers: `n` in `%rdi`, `idx` in `%rsi`, and `q` in `%rdx`.
+                Line 3: movq %rsp, %rbp
+                Action: Copies the value of the stack pointer (%rsp) into the base pointer (%rbp).
+                Purpose: Establishes a new frame pointer for the current function. All local variables will now be referenced relative to this stable address.
 
-                * **Line 2:** `pushq %rbp`
-                    * **Action:** Pushes the current value of the **base pointer** (`%rbp`) onto the stack.
-                    * **Purpose:** This saves the caller's frame pointer, as `%rbp` is a **callee-saved register**.
+                Line 4: subq $16, %rsp
+                Action: Subtracts 16 bytes from the stack pointer.
+                Purpose: Allocates space on the stack for the local variable i (8 bytes) and some padding (8 bytes). i will be located at %rbp - 8.
 
-                * **Line 3:** `movq %rsp, %rbp`
-                    * **Action:** Copies the value of the **stack pointer** (`%rsp`) into the base pointer (`%rbp`).
-                    * **Purpose:** Establishes a new **frame pointer** for the current function. All local variables will now be referenced relative to this stable address.
+                Lines 5-7:
+                Action: These three instructions collectively allocate the variable-size array p.
+                Line 5: leaq 22(,%rdi,8), %rax
+                Calculates 22 + 8 * n (since n is in %rdi and each pointer is 8 bytes) and stores it in %rax. The 22 is padding to ensure proper alignment.
+                Line 6: andq $-16, %rax
+                Performs a bitwise AND with ...11110000 to align the calculated size in %rax to a 16-byte boundary.
+                Line 7: subq %rax, %rsp
+                Subtracts the final, aligned size from the stack pointer, allocating the required space for array p.
 
-                * **Line 4:** `subq $16, %rsp`
-                    * **Action:** Subtracts 16 bytes from the stack pointer.
-                    * **Purpose:** Allocates space on the stack for the local variable `i` (8 bytes) and some padding (8 bytes). `i` will be located at `%rbp - 8`.
+                Lines 8-11:
+                Action: These lines calculate the address of the beginning of the array p and store it in a register for easy access.
+                Line 11: movq %r8, %rcx
+                The final address of p (calculated in the preceding lines) is moved into %rcx. This register will be used as the base address for accessing p's elements. %rcx has the value of %rsp + 8
 
-                * **Lines 5-7:**
-                    * **Action:** These three instructions collectively allocate the variable-size array `p`.
-                    * **Line 5:** `leaq 22(,%rdi,8), %rax`
-                        * Calculates `22 + 8 * n` (since `n` is in `%rdi` and each pointer is 8 bytes) and stores it in `%rax`. The 22 is padding to ensure proper alignment.
-                    * **Line 6:** `andq $-16, %rax`
-                        * Performs a bitwise AND with `...11110000` to align the calculated size in `%rax` to a 16-byte boundary.
-                    * **Line 7:** `subq %rax, %rsp`
-                        * Subtracts the final, aligned size from the stack pointer, allocating the required space for array `p`.
+                // Initialization: Running the For-Loop
 
-                * **Lines 8-11:**
-                    * **Action:** These lines calculate the address of the beginning of the array `p` and store it in a register for easy access.
-                    * **Line 11:** `movq %r8, %rcx`
-                        * The final address of `p` (calculated in the preceding lines) is moved into `%rcx`. This register will be used as the base address for accessing `p`'s elements.
-                        * %rcx has the value of %rsp + 8
-                ---
+                Line 12: .L3:
+                Action: This is the label for the start of the loop.
+                Purpose: The for loop in the C code translates to this section. The loop counter i is held in %rax.
 
-                ### **Initialization Loop**
+                Line 13: movq %rdx, (%rcx,%rax,8)
+                Action: This is the core of the loop, corresponding to p[i] = q.
+                Purpose: Moves the value of q (in %rdx) into the memory location p[i] (toward the bottom of the stack right after local variables). The address is calculated as base_address + index * scale, 
+                         where base_address is %rcx, index is %rax (i), and the scale is 8 (size of a pointer).
 
-                * **Line 12:** `.L3:`
-                    * **Action:** This is the label for the start of the loop.
-                    * **Purpose:** The `for` loop in the C code translates to this section. The loop counter `i` is held in `%rax`.
+                Line 14: addq $1, %rax
+                Action: Increments the value of i (in %rax) by 1.
 
-                * **Line 13:** `movq %rdx, (%rcx,%rax,8)`
-                    * **Action:** This is the core of the loop, corresponding to `p[i] = q;`.
-                    * **Purpose:** Moves the value of `q` (in `%rdx`) into the memory location `p[i] (toward the bottom of the stack right after local variables)`. 
-                                   The address is calculated as `base_address + index * scale`, where `base_address` is `%rcx`, `index` is `%rax` (`i`), and the `scale` is 8 (size of a pointer).
+                Line 15: movq %rax, -8(%rbp)
+                Action: Stores the updated value of i back onto the stack at the address %rbp - 8.
 
-                * **Line 14:** `addq $1, %rax`
-                    * **Action:** Increments the value of `i` (in `%rax`) by 1.
+                Line 17: movq -8(%rbp), %rax
+                Action: Retrieves the value of i from the stack and places it back into %rax.
 
-                * **Line 15:** `movq %rax, -8(%rbp)`
-                    * **Action:** Stores the updated value of `i` back onto the stack at the address `%rbp - 8`.
+                Line 18: cmpq %rdi, %rax
+                Action: Compares i (in %rax) with n (in %rdi).
+                Purpose: This is the loop condition (i < n).
 
-                * **Line 17:** `movq -8(%rbp), %rax`
-                    * **Action:** Retrieves the value of `i` from the stack and places it back into `%rax`.
+                Line 19: jl .L3
+                Action: if i is less than n, the program jumps back to the .L3 label to continue the loop.
 
-                * **Line 18:** `cmpq %rdi, %rax`
-                    * **Action:** Compares `i` (in `%rax`) with `n` (in `%rdi`).
-                    * **Purpose:** This is the loop condition (`i < n`).
+                // Function Epilogue: Cleaning Up and Returning
 
-                * **Line 19:** `jl .L3`
-                    * **Action:** if `i` is less than `n`, the program jumps back to the `.L3` label to continue the loop.
+                Line 20: leave
+                Action: This single instruction performs two tasks:
 
-                    
-                ### **Function Epilogue: Cleaning Up and Returning**
+                movq %rbp, %rsp: It sets the stack pointer to the address of the saved %rbp, effectively deallocating all local variables and the p array.
 
-                * **Line 20:** `leave`
-                    * **Action:** This single instruction performs two tasks:
-                        1.  `movq %rbp, %rsp`: It sets the stack pointer to the address of the saved `%rbp`, effectively deallocating all local variables and the `p` array.
-                        2.  `popq %rbp`: It pops the saved `%rbp` value from the stack into the `%rbp` register, restoring the caller's base pointer and moving `%rsp` to the saved return address.
+                popq %rbp: It pops the saved %rbp value from the stack into the %rbp register, restoring the caller's base pointer and moving %rsp to the saved return address.
 
-                * **Line 21:** `ret`
-                    * **Action:** Pops the return address off the stack and jumps to it.
-                    * **Purpose:** Returns control to the calling function.       
+                Line 21: ret
+                Action: Pops the return address off the stack and jumps to it.
+                Purpose: Returns control to the calling function.  
 
+                // Visual Representation of the Stack
 
                 Stack Bottom (Higher Addresses)
                 +---------------------+
