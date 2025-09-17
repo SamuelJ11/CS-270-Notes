@@ -67,6 +67,14 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
 
             - Absolute:  4 bytes are used to directly specify the target
 
+        • A summary of the jump types is given in a table below:
+
+            | Jump Type   | Operand Type               | Encoded in machine code                          |
+            | ----------- | -------------------------- | ------------------------------------------------ |
+            | Direct      | Label                      | PC relative or Absolute                          |
+            | Conditional | Label                      | PC-relative offset                               |
+            | Indirect    | Register or memory pointer | Uses **value in register/memory**, not an offset |
+
         • The assembler and linker select the appropriate encodings for the jmp instruction
 
         • Consider the following example below:
@@ -201,6 +209,206 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
             - if either of these two expressions could potentially cause an error or have a side effect, this could result in invalid behavior
 
     G. Loops
+
+        • The general form of a do-while loop is given below:
+
+            do
+                body-statement
+                while (test-expr);
+
+            - the loop repeats while the test-expr returns a non-zero value, and the body statement is executed at least once
+
+            - this code can then be translated into conditionals and goto statements;
+            
+            loop:
+                body-statement
+                t = test-expr;
+                if (t)
+                    goto loop;
+
+        • There are two main ways a while loop is translated to machine code:
+        
+            - in the 'jump to middle' translation, there is an unconditional jump to the test at the end of the loop:                                                      
+
+                long fact_while(long n)             fact_while:
+                {                                       movl $1, %eax
+                    long result = 1;                    jmp .L6
+                    while (n > 1) {                  .L5: imulq %rdi, %rax
+                        result *= n;                    subq $1, %rdi
+                        n = n - 1;                   .L6: cmpq $1, %rdi
+                    }                                   jg .L5
+                    return result;                      rep; ret
+                }
+
+            - the second translation method is known as a 'guarded do', in which the code is translated into a do-while loop by using a conditional branch to skip over
+              the loop if the initial test fails:
+
+                t = test-expr;
+                if (!t) 
+                    goto done;
+                loop:
+                    body-statement
+                    t = test-expr;
+                    if (t) 
+                        goto loop;
+                done:
+
+                * gcc follows this strategy when compiled with higher levels of optimization (-O1, -O2)
+
+        • The general form of for-loops is as follows:
+
+            for(init-expr; test-expr; update-expr)
+                body-statement
+
+            - below is the machine code of the two types of translations
+
+                Jump-to-middle                              Guarded-do
+                ----------------                            ----------------
+                init-expr;                                  init-expr;
+                goto test;                                  t = test-expr;
+                loop:                                       if (!t) goto done;
+                    body-statement                          loop:
+                    update-expr;                                body-statement
+                test:                                           update-expr;
+                    t = test-expr;                              t = test-expr;
+                    if (t) goto loop;                           if (t) goto loop;
+                                                            done:
+
+    H. Switch statements
+
+        • Switch statements provide a multiway branching capability based on the value of an integer index - very useful when there is a large number of outcomes
+
+            - uses a data structure called a 'jump table' - an array where entry i is the address of a code segment implementing the action the program 
+              should take when the switch index equals i
+
+            - the time taken to perform the switch is independent of the number of switch cases (unlike if-else chains)
+
+            - example of a function implementing a switch case is given below
+
+                    (a) Switch statement                       (b) Machine code translated back into C
+                    --------------------                       ---------------------------------------
+                    void switch_eg(long x, long n,             void switch_eg_impl(long x, long n, long* dest)
+                    long* dest)                                {
+                    {                                               static void* jt[7] = {&&loc_A, &&loc_def, &&loc_B,
+                        long val = x;                                   &&loc_C, &&loc_D, &&loc_def, &&loc_D};
+                        switch(n)                                   unsigned long index = n - 100;
+                        {                                           long val;
+                            case 100:                               if (index > 6) 
+                                                                        goto loc_def;
+                                val *= 13;                          goto *jt[index];
+                                break;                          loc_A: /* Case 100 */
+                            case 102:                               val = x * 13;
+                                val += 10;                          goto done;
+                                /*Fallthrough*/                 loc_B: /* Case 102 */
+                            case 103:                               x = x + 10;
+                                val += 11;                      loc_C: /* Case 103 */
+                                break;                              val = x + 11;
+                            case 104:                           goto done;
+                            case 106:                           loc_D: /* Cases 104, 106 */
+                                val *= val;                         val = x * x;
+                                break;                          goto done;
+                            default:                            loc_def: /* Default case */
+                                val = 0;                            val = 0;
+                        }                                       done:
+                        *dest = val;                                *dest = val;
+                    }                                             }
+
+                    (c) Assembly code
+                    ----------------
+                    void switch_eg(long x, long n, long* dest)
+                    xin %rdi, n in %rsi, dest in %rdx
+                    1 switch_eg:
+                    2 subq $100, %rsi               Compute index = n - 100
+                    3 cmpq $6, %rsi                 Compare index : 6
+                    4 ja .L8                        If >, goto loc_def
+                    5 jmp *.L4(,%rsi,8)             Goto *jt[index]
+                    6 .L3: loc_A:
+                    7 leaq (%rdi,%rdi,2), %rax      3*x
+                    8 leaq (%rdi,%rax,4), %rdi      val = 13*x
+                    9 jmp .L2                       Goto done
+                    10 .L5: loc_B:
+                    11 addq $10, %rdi               x = x + 10
+                    12 .L6: loc_C:
+                    13 addq $11, %rdi               val = x + 11
+                    14 jmp .L2                      Goto done
+                    15 .L7: loc_D:
+                    16 imulq %rdi, %rdi             val = x * x
+                    17 jmp .L2                      Goto done
+                    18 .L8: loc_def:
+                    19 movl $0, %edi                val = 0
+                    20 .L2: done:
+                    21 movq %rdi, (%rdx)            *dest = val
+                    22 ret                          Return
+
+                - the array jt in (b) contains seven entries, each of which is the address of a block of code (these are used with && to denote code locations, not with &
+                  which denotes data values)
+
+                    -- these locations are defined by labels in the assembly code (c) 
+
+                - the original C code has cases for values 100, 102-104 and 106, but n can be an arbitrary integer
+
+                    -- to create the corresponding indices of the jt, the compiler shifts the range to between zero and six by subracting 100 from n (i.e. if n = 106, then
+                       index = 106 - 100 = 6).  These values are stored in the 'index' variable in the original C version
+
+                - the index variable is then treated by the compiler as an unsigned value, simplifying the branching possibilities:
+
+                    -- two’s-complement math guarantees that all negative indices become huge unsigned numbers, so a single test index > 6 correctly filters:
+
+                        if n < 100 (signed) → n > 100 (unsigned) → jump to default
+
+                        if n > 106 (signed/unsigned) → jump to default
+
+                - there are 5 distinct locations to jump to:
+
+                    -- loc_A (.L3)
+                    -- loc_B (.L5)
+                    -- loc_C (.L6)
+                    -- loc_D (.L7)
+                    -- loc_def (.L8)
+
+                - the key step in executing a switch statement is to access a code location through a jump table, which corresponds to the 'goto *jt[index];'
+                  in the extended C code
+
+                - in the assembly code version, line 5 has the jump instruction prefixed with a "*" to indicate an indirect jump
+                    
+                - the operand specifies a memory location indexed by register %rsi (index):
+
+                    -- .L4 is the base of the jump table.
+
+                    -- %rsi * 8 (,%rsi,8) computes the index scaled by the size of a pointer (8 bytes).
+
+                    -- *.L4 + (,%rsi,8) gives the memory location of the code pointer to jump to, and the * dereferences that memory, and fetches the absolute target address from memory
+
+            - in the assembly code, the jump table is located in the segment of the object code file called .rodata (read-only data):
+
+                    .section     .rodata
+                    .align 8
+                .L4:
+                    .quad .L3    # Case 100: loc_A
+                    .quad .L8    # Case 101: loc_def
+                    .quad .L5    # Case 102: loc_B
+                    .quad .L6    # Case 103: loc_C
+                    .quad .L7    # Case 104: loc_D
+                    .quad .L8    # Case 105: loc_def
+                    .quad .L7    # Case 106: loc_D
+                    
+                    -- .align 8 → Make sure the data starts at an address divisible by 8 bytes (needed for 64-bit addresses).
+
+                    -- .L4: → This is a label marking the start of the jump table. Its address is the base for indexing.
+
+                    -- each .quad stores an 8-byte address of a code label. For example, .L3 is where case 100’s code starts.
+
+        • The key point is to see that the use of a jump table requires only a single jump table access, even if there are hundreds of cases.
+
+
+
+
+
+
+
+
+
+
         
 
 
