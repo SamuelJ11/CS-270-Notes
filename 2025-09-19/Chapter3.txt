@@ -218,13 +218,70 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
               - IMPORTANT: 
               
                   -- notice in the second block (call proc), the addresses are offset: x2 is now at 28(%rsp), whereas before it was at 12(%rsp)
-
                   -- this is because the starred pushq instructions (*) both increment the stack pointer by 8, so &x2, for example, is now stored at
                      12 + (8 * 2) = 28(%rsp).  
 
     E. Local Storage in Registers      
 
+        • Although only one procedure can be active at a given time, we must ensure that when one procedure (the caller) calls another (the callee), 
+          the callee does not overwrite any register values that the caller plans to use later. 
+          
+        • Recall the callee-saved registers:
 
+            %rbx  - Callee-saved, general-purpose
+            %rbp  - Callee-saved frame pointer (start of stack frame)
+            %r12  - Callee-saved, general-purpose
+            %r13  - Callee-saved, general-purpose
+            %r14  - Callee-saved, general-purpose
+            %r15  - Callee-saved, general-purpose
+
+        • When procedure P calls procedure Q, Q must preserve the values of these registers:
+
+            - procedure Q can preserve a register value either by
+
+                -- (1) not changing it at all 
+                -- (2) pushing the original value onto the stack, altering it, and popping the old value from the stack before returning
+
+        • All other registers (except for %rsp) are classified as caller-saved registers:
+            
+            - this means that they can be modified by any called function.
+
+    F.  Recursive Procedures
+
+        • Using callee-saved registers allows for the seamless implementation of recursively called procedures
+
+            - below is an example of a recursively defined factorial function
+
+              long rfact(long n)
+              {
+                  long result;
+
+                  if (n <= 1)
+                      result = 1;
+                  else
+                      result = n * rfact(n - 1);
+
+                  return result;
+              }
+
+              1 rfact:
+              2   pushq %rbx            # Save %rbx because it is callee-saved
+              3   movq %rdi, %rbx       # Store n in %rbx (so it survives the recursive call)
+              4   movl $1, %eax         # Set default return value to 1 (base case)
+              5   cmpq $1, %rdi         # Compare n with 1
+              6   jle .L35              # If n <= 1, jump to done (base case)
+              7   leaq -1(%rdi),%rdi    # Compute n-1
+              8   call rfact            # Recursive call rfact(n-1)
+              9   imulq %rbx, %rax      # Multiply returned value (in %rax) by n (in %rbx)
+              10 .L35: done:
+              11  popq %rbx             # Restore old value of %rbx
+              12  ret                   # Return with result in %rax
+
+
+    VIII. Array Allocation and Access
+
+
+                       
             
 
                    
