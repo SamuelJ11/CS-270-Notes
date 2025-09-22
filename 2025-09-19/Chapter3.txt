@@ -1,0 +1,239 @@
+CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
+
+    VII. Procedures
+
+    • Procedures (functions, methods, subroutines, etc) provide a way to package code that implements some functionality with a designated set of arguments and 
+      an optional return value.
+
+    • There are many different attributes that must be handled when providing machine-level support for procedures
+
+        - Suppose procedure P calls procedure Q, and Q executes and returns back to P:
+
+            -- passing control:  the program counter must be set to the starting address of the code for Q upon entry, and then set tot he instruction in P 
+                                 following the call to Q upon return
+            
+            -- passing data:  P must be able to provide one or more parameters to Q, and Q must be able to to return a value back to PC
+
+            -- Allocating and deallocating memory:  Q may need to allocate space for local variables when it begins and then free that storage before it returns
+
+    A. The Run-time Stack
+
+        • Using the example of procedure P calling Q, while Q is executing, P, along with any of the procedures in the chain of calls up to P, is temporarily
+          suspended
+
+          - when Q returns, any storage it allocates can be freed.
+
+        • Space for data is allocated on the stack by decrementing the stack pointer, and dellocated by incrementing the stack pointer.
+
+        • The frame for the currently executing procedure is always at the "top" of the stack.
+
+            - when procedure P calls procedure Q, it will push the return address onto the stack, indicating where within P the program should resume execution
+              once Q returns (see textbook page 268 for a visualization)
+
+        • The stack frames for most procedures are of fixed size, allocated at the beggining of the procedure
+
+            - procedure P can pass up to six integral values (pointers and integers) on the stack
+
+                -- if Q requires more arguments, these can be stored by P within its stack frame prior to the call
+
+        • Many functions don't require a stack frame - this occurs when all of the local variables can be held in registers and the function
+          does not call any other functions
+
+            - this is sometimes called a leaf procedure
+
+    B. Control Transfer
+
+        • Passing control from P to Q involves simply setting the program counter to the starting address of the code for q
+
+            - the instruction call Q pushes an address 'A' onto the stack and sets the PC to the beggining of Q.  
+            
+            - the pushed address 'A' is referred to as the return address and is computed as the address of the instruction immediately following 
+              the call instruction
+
+            - the 'ret' instruction pops A off the stack and sets the PC to A.
+
+        • The call instruction has a target indicating the address of the instruction where the called procedure starts:
+
+            - like jumps, they can be either direct (requiring a label) or indirect using a '*' followed by an operand specifier using one of the formats 
+              below:  
+
+                        Type        Form          Operand Value          Name
+                ----------------------------------------------------------
+                Immediate   $Imm          Imm                    Immediate
+                Register    ra            R[ra]                  Register
+                Memory      Imm           M[Imm]                 Absolute
+                Memory      (ra)          M[R[ra]]               Indirect
+                Memory      Imm(rb)       M[Imm+R[rb]]           Base+displacement
+                Memory      (rb,ri)       M[R[rb]+R[ri]]         Indexed
+                Memory      Imm(rb,ri)    M[Imm+R[rb]+R[ri]]     Indexed
+                Memory      (,ri,s)       M[R[ri]*s]             Scaled indexed
+                Memory      Imm(,ri,s)    M[Imm+R[ri]*s]         Scaled indexed
+                Memory      (rb,ri,s)     M[R[rb]+R[ri]*s]       Scaled indexed
+                Memory      Imm(rb,ri,s)  M[Imm+R[rb]+R[ri]*s]   Scaled indexed
+
+        • Below is a walkthrough of the disassembled code for two functions, top and leaf, as well as the portion of code in function main where top gets called:
+
+          1  0000000000400540 <leaf>:   (y in %rdi)
+          2  400540: 488d4702      lea 0x2(%rdi), %rax     L1: y + 2
+          3  400544: c3            retq                    L2: Return
+
+          4  0000000000400545 <top>:   (x in % rdi)
+          5  400545: 4883ef05      sub $0x5, %rdi          T1: x - 5
+          6  400549: e8f2ffffff    callq 400540 <leaf>     T2: Call leaf(x-5)
+          7  40054e: 4801c0        add %rax, %rax          T3: Double result
+          8  400551: c3            retq                    T4: Return
+
+          9   40055b: e8e5ffffff   callq 400545 <top>      M1: Call top(100)
+          10  400560: 4889c2       mov %rax, %rdx          M2: Resume
+
+
+          Label  PC        Instruction        %rdi   %rax   %rsp              *%rsp       Description
+          M1     0x40055b  callq              100    —      0x7fffffffe820    —           Call top(100)
+          T1     0x400545  sub                100    —      0x7fffffffe818    0x400560    Entry of top
+          T2     0x400549  callq              95     —      0x7fffffffe818    0x400560    Call leaf(95)
+          L1     0x400540  lea                95     —      0x7fffffffe810    0x40054e    Entry of leaf
+          L2     0x400544  retq               —      97     0x7fffffffe810    0x40054e    Return 97 from leaf
+          T3     0x40054e  add                —      97     0x7fffffffe818    0x400560    Resume top
+          T4     0x400551  retq               —      194    0x7fffffffe818    0x400560    Return 194 from top
+          M2     0x400560  mov                —      194    0x7fffffffe820    —           Resume main
+
+            - the first three columns describe the instruction being executed, including the instruction label, the address, and the instruction type
+
+            - the next four columns show the state of the program before the instruction is executed, including the contents of registers 
+              %rdi, %rax, and %rsp, as well as the value at the top of the stack.
+
+            - REMEMBER: %rsp always holds a memory address that points to the most recently pushed value (top) on the stack, so the column *%rsp holds the return address
+              (the address of the next instruction in the caller)
+
+            1. instruction M1 in main calls the top function the address of its first instruction (400545).
+
+            2. after M1 executes, the address of the next instruction in main 400560 (M2) is pushed to the stack, so %rsp now holds the ADDRESS (0x7fffffffe820)
+               which points to the return address 0x400560.  
+
+            3. after top is called, 5 is subtracted from %rdi (T1).  The effect of the previous instruction (M1) takes place.
+
+            4. in T2, leaf is called, and the return address (next instruction in top (T3)) is pushed to the stack (40054e). The effect of the previous instruction 
+               (T1) takes place.
+
+            5. instruction L1 of leaf sets %rax to 97, the value to be returned. the effect of the previous instruction (T2) takes place.
+
+            6. instruction L2 then returns, popping the value 40054e off the stack, and %rsp now points to the address of M2.
+               the effect of the previous instruction (L1) takes place.
+
+            7. Control transfers back to instruction T3 of top.  the value of the return register (97) is doubled.  the effect of the previous instruction (L2) takes place
+
+            8. Instruction T4 then returns. It pops 4000560 from the stack, thereby setting the PC to instruction M2 of main.
+
+            0. The next instruction in main executes (M2). the stack pointer has also been restored to 0x7fffffffe820 (the value it had before the call to top).
+               the effect of the previous instruction (T4) takes place.
+
+    C. Data Transfer
+
+        • With x86-64, most of the data passing to and from procedures takes place via registers.
+
+        • When procedure P calls procedure Q, the code for P must first copy the arguments into the proper registers. 
+        
+            - similarly, when Q returns back to P, the code for P can access the returned value in register %rax.
+
+        • The registers are used in a specified order, with the name used for a register depending on the size of the datatype being passed:      
+
+            Argument Number   1      2      3      4      5      6
+            ---------------------------------------------------------
+            64-bit operands   %rdi   %rsi   %rdx   %rcx   %r8    %r9
+            32-bit operands   %edi   %esi   %edx   %ecx   %r8d   %r9d
+            16-bit operands   %di    %si    %dx    %cx    %r8w   %r9w
+            8-bit operands    %dil   %sil   %dl    %cl    %r8b   %r9b
+
+        • If procedure P calls Q with 'n' integral arguments such that n > 6, then arguments 7 - n are stored in P's stack frame.
+
+        • When you pass parameters on the stack in x86-64, the calling convention requires that all data types occupy a space that 
+          is a multiple of 8 bytes (64 bits), even if the actual data is smaller.
+
+        * See textbook page 275 for an example of a function 'proc' that takes 8 integer arguments of varying sizes 
+
+    D. Local Storage on the Stack
+
+        • Typically, a procedure allocates space on the stack frame by decrementing the stack pointer.
+
+        • At times, however, local data must be stored in memory. Common cases of this include these:
+
+            - there are not enough registers to hold all of the local data.
+
+            - the address operator '&' is applied to a local variable, and hence we must be able to generate an address for it.
+
+        • See the functions in swapadd.c for the assembly code they disassemble to below:
+
+          **instructions with (**) are not directly relevant to the program, but rather for stack protection      
+
+            caller:
+                subq	$40, %rsp           Allocate 40 bytes for stack frame (in the textbook, this is 16)
+                **movq    %fs:40, %rax      read the stack canary into %rax
+                **movq    %rax, 24(%rsp)    store the canary in the stack frame
+                **xorl    %eax, %eax        zero out %eax
+                movq	$534, 8(%rsp)       Store 534 in arg1
+                movq	$1057, 16(%rsp)     Store 1057 in arg2
+                leaq	16(%rsp), %rsi      Compute &arg2 as second argument
+                leaq	8(%rsp), %rdi       Compute &arg1 as first argument
+                call	swap_add            Call swap_add(&arg1,&arg2)  *return value stored in %rax
+                movq	8(%rsp), %rdx       Get arg1
+                subq	16(%rsp), %rdx      Compute diff = arg1 - arg2
+                imulq	%rdx, %rax          Multiply sum * diff
+                **movq    24(%rsp), %rdx    load stored canary
+                **subq    %fs:40, %rdx      compare canary with original value
+                **jne     .L5               jump if canary corrupted (stack smashing detected)
+                addq	$40, %rsp           Deallocate stack frame
+                ret                       Return
+
+        • For a more complicated example, the (relevant) assembly code for callproc.c is shown below:
+
+          call_proc:
+              subq	$40, %rsp           Allocate 40-byte stack frame
+              movq	$1, 16(%rsp)        Store 1 in &x1
+              movl	$2, 12(%rsp)        Store 2 in &x2
+              movw	$3, 10(%rsp)        Store 3 in &x3
+              movb	$4, 9(%rsp)         Store 4 in &x4
+              leaq	12(%rsp), %rcx      Load &x2 into %rcx (argument 4)
+              leaq	16(%rsp), %rsi      Load &x1 into %rsi (argument 2)
+              leaq	9(%rsp), %rax       Create &x4 
+              *pushq	%rax               Store &x4 as argument 8   *equivalent to (1) subq $8, %rsp (2) movq %rax, (%rsp)
+              *pushq	$4                 Store 4 as argument 7     *equivalent to (1) subq $8, 4 (2) movq 4, (%rsp)
+              leaq	26(%rsp), %r9       Load &x3 into %r9 (argument 6)
+              movl	$3, %r8d            Store 3 into argument 5
+              movl	$2, %edx            Store 2 into argument 3
+              movl	$1, %edi            Store 1 into argument 1
+
+              call	proc
+              movslq	28(%rsp), %rax    Get x2 and convert to long
+              addq	  32(%rsp), %rax    Compute x1 + x2 and store in %rax
+              movswl	26(%rsp), %edx    Get x3 and convert to int
+              movsbl	25(%rsp), %ecx    Get x4 and convert to int
+              subl	  %ecx, %edx        Subtract x3 - x4 
+              movslq	%edx, %rdx        Convert result of previous instruction to long
+              imulq	%rdx, %rax          Compute (x1 + x2) * (x3 - x4)
+              addq	$16, %rsp           Deallocate the stack frame
+              ret                       Return
+
+              - notice that the local variables x1 - x4 are stored on the stack
+     
+              - IMPORTANT: 
+              
+                  -- notice in the second block (call proc), the addresses are offset: x2 is now at 28(%rsp), whereas before it was at 12(%rsp)
+
+                  -- this is because the starred pushq instructions (*) both increment the stack pointer by 8, so &x2, for example, is now stored at
+                     12 + (8 * 2) = 28(%rsp).  
+
+    E. Local Storage in Registers      
+
+
+            
+
+                   
+
+
+
+
+        
+ 
+
+      
+ 
