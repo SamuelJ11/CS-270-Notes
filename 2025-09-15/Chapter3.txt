@@ -235,7 +235,7 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
                     long result = 1;                    jmp .L6
                     while (n > 1) {                  .L5: imulq %rdi, %rax
                         result *= n;                    subq $1, %rdi
-                        n = n - 1;                   .L6: cmpq $1, %rdi
+                        n = n - 1;                   .L6: cmpq $1, %rdi 
                     }                                   jg .L5
                     return result;                      rep; ret
                 }
