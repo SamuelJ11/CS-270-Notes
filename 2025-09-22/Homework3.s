@@ -6,23 +6,24 @@ foo:
 .LFB23:
 	.cfi_startproc
 	endbr64
+	movl	$0, %ecx
 	movl	$0, %eax
 	jmp	.L2
 .L3:
+	sarl	%edi
+	sarl	%esi
 	addl	$1, %eax
-	movl	$0, %ecx
-	leaq	1(%rcx), %rdx
-	movb	%dl, (%rcx)
-	movsbq	%dl, %rdx
 .L2:
-	cmpb	$19, %al
-	setle	%cl
-	testq	%rdx, %rdx
-	je	.L5
-	testb	%cl, %cl
+	cmpl	$31, %eax
+	jg	.L5
+	movl	%edi, %edx
+	xorl	%esi, %edx
+	testb	$1, %dl
 	jne	.L3
+	addl	$1, %ecx
+	jmp	.L3
 .L5:
-	movsbl	%al, %eax
+	movl	%ecx, %eax
 	ret
 	.cfi_endproc
 .LFE23:

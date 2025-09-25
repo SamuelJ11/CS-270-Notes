@@ -253,24 +253,4 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
                 |                     |
                 +---------------------+  <--- %rsp (Stack Pointer)
                 Stack Top (Lower Addresses)                          
-                
-
-
-
-
-                                    
-
-
-
-
-
-                                  
-
-
-
-            
-                    
-
-
-
             

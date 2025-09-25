@@ -38,7 +38,7 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
             (a in %rdi, b in %rsi)
 
             comp:
-                cmpq %rsi, %rdi     (a - b)
+                cmpq %rsi, %rdi     (b - a)
                 setl %al            (if SF ^ OF, set low-order byte of %eax (%ax) to 1)
                 movzbl %eax         (clears remaining bits of %eax **and %rax**)  ** In x86-64, any instruction that writes to a 32-bit register will automatically zero out 
                 ret                                                                  the upper 32 bits of the corresponding 64-bit register
