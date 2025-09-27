@@ -38,8 +38,9 @@ int foo(int *x)
 }
 */
 
-/*
+
 //Problem 0:3
+/*
 int foo(char *rdi) 
 {
     int retval = 0;
