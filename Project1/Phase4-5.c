@@ -61,5 +61,5 @@ int main()
                         0x38                       0x35                        0x30                        0x36                        0x32                        0x34
                         0x8                        0x5                         0x0                         0x6                         0x2                         0x4           // 2
 
-mysterystring[]         [0x8] = 'o'                [0x5] = 'r'                 [0x0] = 'a'                 [0x6] = 'n'                 [0x2] = 'g'                 [0x4] = '3'   // 3
+mysterystring[]         [0x8] = 'o'                [0x5] = 'r'                 [0x0] = 'a'                 [0x6] = 'n'                 [0x2] = 'g'                 [0x4] = 'e'   // 3
 */
