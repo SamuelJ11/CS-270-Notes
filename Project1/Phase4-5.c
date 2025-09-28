@@ -38,9 +38,9 @@ char* arrayfunc(char* origstring, int size)
 
     do
     {      
-        char origchar = origstring[index];
-        origchar = origchar & 0xf;
-        retval[index] = mysterystring[origchar];  
+        char origchar = origstring[index];  // 1
+        origchar = origchar & 0xf;          // 2
+        retval[index] = mysterystring[origchar];  // 3
         index++;
     } while (index != size);    
 
@@ -51,7 +51,15 @@ char* arrayfunc(char* origstring, int size)
 int main() 
 {
     printf("the value of eax is %d\n", func4(3, 0, 14));  
-    printf("the value of your string is %s\n", arrayfunc("orange", 6));
+    printf("the value of your string is %s\n", arrayfunc("850624", 6));
 }
 
 
+/*
+                        8                           5                           0                           6                           2                           4            // 1
+
+                        0x38                       0x35                        0x30                        0x36                        0x32                        0x34
+                        0x8                        0x5                         0x0                         0x6                         0x2                         0x4           // 2
+
+mysterystring[]         [0x8] = 'o'                [0x5] = 'r'                 [0x0] = 'a'                 [0x6] = 'n'                 [0x2] = 'g'                 [0x4] = '3'   // 3
+*/
