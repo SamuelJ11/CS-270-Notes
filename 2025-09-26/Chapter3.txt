@@ -1,0 +1,108 @@
+CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
+
+    VIII. Array Allocation and Access
+
+        • Arrays in C are one means of aggregating primitive data types into larger data types.
+
+        A. Basic Principles
+
+            • Consider the declaration of the form T A[N], where:
+
+                - L * N denotes the size of the contiguous region allocated in memory (L = size of data type T)
+
+                - A is introduced as an identifier that can be used as a pointer to the beginning of the array.
+
+                    -- let the value of this pointer be xₐ
+
+                - array element i will be stored at xₐ + (L * i)
+
+            • For example, if E is declared as int E[N], and we wish to evaluate E[i], where the address of E is stored in register %rdx and 'i' is stored in %rcx, then 
+              movl(%rdx, %rcx, 4), %eax will perform the address computation xₑ + 4i, read that memory location, and store the result in %eax.
+
+        B. Pointer Arithmetic 
+
+            • The array dereference A[i] is identical to the expression *(A + i)
+
+            • Below are some examples involving 'E' from before and thier corresponding assembly code implementation
+
+
+            | Expression | Type | Value       | Assembly Code               |
+            | ---------- | ---- | ----------- | --------------------------- |
+            | E          | int* | xE          | movq %rdx, %rax             |
+            | E[0]       | int  | M[xE]       | movl (%rdx), %eax           |
+            | E[i]       | int  | M[xE+4i]    | movl (%rdx,%rcx,4), %eax    |
+            | &E[2]      | int* | xE+8        | leaq 8(%rdx), %rax          |
+            | E+i-1      | int* | xE+4i−4     | leaq -4(%rdx,%rcx,4), %rax  |
+            | *(E+i-3)   | int  | M[xE+4i−12] | movl -12(%rdx,%rcx,4), %eax |
+            | &E[i]-E    | long | i           | movq %rcx, %rax             |
+
+            * The result is being stored in either register %eax (for data) or register %rax (for pointers).
+
+        C. Nested Arrays
+
+            • int A[5][3] is a 2D array: 5 rows and 3 columns
+
+                - think of it as an array of 5 arrays, and each array holds 3 integers
+
+            • typedef int row3_t[3]
+              row3_t A[5]
+
+                - here row3_t is a type alias for int[3] - an array of 3 integers
+
+                - then A[5] is an array of 5 elements, where each element is a row3_t (exactly the same as A[5][3])
+
+            • The array elements are ordered in memory in row-major order, meaning all elements of row 0, which can be written A[0], followed by all 
+              elements of row 1 (A[1]), and so on
+
+            • To access elements of multi-dimensional arrays, the compiler generates code to compute the offset of the desired element and then uses one of the mov 
+              instructions with the start of the array as the base address and the (possibly scaled) offset as an index:
+
+                - in general, for an array declared as T A[R][C], array element A[i][j] is at memory address:
+
+                    -- &A[i][j] = xₐ + L(C * i + j), where L is the size of the data type T in bytes.
+
+                - to reach element A[i][j], you need:
+
+                    -- i full rows ahead: each row has C elements → offset = i * C
+
+                    -- j elements within the row → offset = j
+
+            • Suppose A is a 5 x 3 2D array, then the array element A[i][j] can be copied to register %eax by the following code:
+
+                - A in %rdi, i in %rsi, and j in %rdx   *L = 4, C = 3
+
+                    -- leaq (%rsi,%rsi,2), %rax – compute 3 * i                     *from (C * i)
+
+                    -- leaq (%rdi,%rax,4), %rax – compute xₐ + 12i                  *from (xₐ + L(C * i))
+
+                    -- movl (%rax,%rdx,4), %eax – read from M[(xₐ + 12i) + 4j]      *equivalently M[xₐ + 4(3i + j)]
+
+        D. Fixed Array size
+
+            • The C compiler is able to make many optimizations for code operating on multi-dimensional arrays of fixed size.
+
+            • Here is an example with the compilation flag -O1:
+
+                - #define N 16
+                  typedef int fix_matrix[N][N];
+
+                - using a #define for N is good coding practice as it allows the programmer to refer to the array size symbolically rather than using a literal number.
+
+                    - if you ever need to change the array size, you only need to change the #define N 16 line, and the change propagates throughout the code.
+            
+            • Suppose we wish to compute ONE ELEMENT in the product matrix of two fix_matrices (N x N) together, where A and B are these matrices, and C is 
+              the product of both A and B:
+
+                - C[i][k] = (A[i][0] * B[0][k]) + (A[i][1] * B[1][k]) + . . . (A[i][N-1] * B[N-1][k])
+
+                - This can be expressed with the follow equation:
+
+                    -- C = ∑j = 0:N-1 (A[i][j] * B[j][k])
+                    
+                - to compute the entire matrix C, we must do this for every value i and k
+
+            •
+
+            
+
+
