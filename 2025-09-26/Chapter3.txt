@@ -98,10 +98,75 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
                 - This can be expressed with the follow equation:
 
                     -- C = ∑j = 0:N-1 (A[i][j] * B[j][k])
-                    
+
                 - to compute the entire matrix C, we must do this for every value i and k
 
-            •
+                * see 'fix_matrix.c' for an implementation and example in C
+
+            • The C code in 'fix_matrix.c' is implemented by by the following assembly code, where:
+
+                - int *Aptr = &A[i][0];  // points to the first element of row i in A
+                - int *Bptr = &B[0][k];  // points to the first element of column k in B
+                - int *Bend = &B[N][k];  // points one past the last element of column k in B
+
+                *also keep in mind that:
+
+                - each element of the matrix is an int, which is 4 bytes
+                - each row of the matrix has 16 elements (N = 16)
+                - so the total size of one row in bytes = 16 × 4 = 64 bytes
+                - when referencing the formula, L = 4, C = 16, and j = k                    
+
+                    1  fix_prod_ele:
+                    2      salq $6, %rdx                # Compute 64 * i
+                    3      addq %rdx, %rdi              # Compute Aptr = xA + 64*i = &A[i][0]           *from (xₐ + L(C * i))
+                    4      leaq (%rsi, %rcx, 4), %rcx   # Compute Bptr = xB + 4*k = &B[0][k]            *from (xₐ + L(C * 0 + j))   
+                    5      leaq 1024(%rcx), %rsi        # Compute Bend = xB + 4*k + 1024 = &B[N][k]     *from (xₐ + L(C * 16 + j)) --> xₐ + 4j + 1024
+                    6      movl $0, %eax                # Set result = 0
+                    7  .L7:                             # loop:
+                    8      movl (%rdi), %edx            # Read *Aptr
+                    9      imull (%rcx), %edx           # Multiply by *Bptr
+                    10     addl %edx, %eax              # Add to result
+                    11     addq $4, %rdi                # Increment Aptr++                              *Aptr moves within the row (+4)
+                    12     addq $64, %rcx               # Increment Bptr += N                           *Bptr must move down the column, so it skips 16 elements each time (+64)
+                    13     cmpq %rsi, %rcx              # Compare Bptr to Bend
+                    14     jne .L7                      # If not equal, go to loop
+                    15     rep; ret                     # Return
+
+        E. Variable Size arrays
+
+            • C99 introduced variable-length arrays (VLAs):
+
+                - int n = 10;
+                  int A[n][n];  // array size determined at runtime
+
+                - the function below shows how to access an element of a VLA:
+
+                    int var_ele(long n, int A[n][n], long i, long j) 
+                    {
+                        return A[i][j];
+                    }
+
+                - the compiler still knows how to compute the memory offset internally using row-major mapping, but we no longer need to do pointer arithmetic manually
+
+            • GCC generates assembly code for this referencing function as:
+                
+                // n in %rdi, A in %rsi, i in %rdx, j in %rcx
+
+                1  var_ele:
+                2      imulq %rdx, %rdi              # Compute n * i
+                3      leaq (%rsi, %rdi, 4), %rax    # Compute xA + 4 * (n * i)
+                4      movl (%rax, %rcx, 4), %eax    # Read from M[xA + 4 * (n * i) + 4 * j]
+                5      ret
+
+            • The dynamic version must use a multiplication instruction to scale i by n, rather than a series of shifts and adds. On some processors, this multiplication can 
+              incur a significant performance penalty, but it is unavoidable in this case.
+
+            * See textbook page 292 for C code and assembly that multiplies two VLA's and computes thier corresponding entry.
+
+
+
+
+
 
             
 
