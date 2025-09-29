@@ -187,7 +187,7 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
                 int i;      // 4 bytes, offset 0
                 int j;      // 4 bytes, offset 4
                 int a[10]   // 40 bytes, offset 8
-                int *p      // 8 bytes, offset 16
+                int *p      // 8 bytes, offset 52
                 };
 
                 * r is a pointer to rec (the addres of the struct)
@@ -234,8 +234,66 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
 
         B. unions
         
-            
+            • Unions provide a way to circumvent the type system of C, allowing a single object to be referenced using multiple types
 
-            
+            • Rather than having the different fields reference different blocks of memory, they all reference the same block:
+
+                - only one field can hold a meaningful value at a time.
+ 
+                - for pointer p of type union U3 *, references p->c, p->i[0], and p->v would all reference the beginning of the data structure:
+
+                    union U3 {
+                    char c;         //offset = 0
+                    int i[2];       //offset = 0
+                    double v;       //offset = 0
+                    };
+
+                - *size = 8 (the size of its largest field)
+
+            • If you know that only one of several fields will ever be used at a time, you don’t need separate memory for each field, so a Union
+              would be appropriate here:
+
+                - consider a binary tree, a data structure made up of nodes where each node can have at most two children
+
+                    -- internal nodes ave at least one child (left, right, or both), and do not store actual data, but 
+                        exist to connect other nodes.
+
+                    -- leaf nodes have no children (both left and right pointers are null) and store the actual data.
+                
+                - in the struct example of a binary tree, every node requires 32 bytes, with half of the bytes wasted for each type of node.
+
+
+                    struct node_s {
+                        struct node_s *left;
+                        struct node_s *right;
+                        double data[2];
+                    };
+
+                    *leaf nodes don't have children, so the left and right nodes are wasted (16 bytes wasted)
+                    *internal nodes don't store data, so the data[2] field is unused (16 bytes wasted)
+
+                    
+                - in the union example below, every node will require just 16 bytes. 
+
+                    union node_u {
+                        struct {
+                        union node_u *left;
+                        union node_u *right;
+                        } 
+                        internal;
+                        double data[2];
+                    };
+
+                    * if the node is a leaf, you use data[2] (16 bytes)
+                    * if the node is internal, you use 'internal' (16 bytes)
+
+                * both examples use struct to group the left and right node pointers 
+
+                - if we have a pointer to a union (union node_u *n), then 'n' is a pointer to a union node
+
+                    -- n->data[0] and n->data[1] accesses the data stored in a leaf node
+                    -- n->internal.left and n->internal.right accesses the children of an internal node
+                    
+                            
 
 
