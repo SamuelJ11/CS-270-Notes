@@ -23,7 +23,7 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
 
             • The array dereference A[i] is identical to the expression *(A + i)
 
-            • Below are some examples involving 'E' from before and thier corresponding assembly code implementation
+            • Below are some examples involving 'E' from before and their corresponding assembly code implementation
 
 
             | Expression | Type | Value       | Assembly Code               |
@@ -79,7 +79,7 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
 
         D. Fixed Array size
 
-            • The C compiler is able to make many optimizations for code operating on multi-dimensional arrays of fixed size.
+            • The C compiler can make many optimizations for code operating on multi-dimensional arrays of fixed size.
 
             • Here is an example with the compilation flag -O1:
 
@@ -103,7 +103,7 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
 
                 * see 'fix_matrix.c' for an implementation and example in C
 
-            • The C code in 'fix_matrix.c' is implemented by by the following assembly code, where:
+            • The C code in 'fix_matrix.c' is implemented by the following assembly code, where:
 
                 - int *Aptr = &A[i][0];  // points to the first element of row i in A
                 - int *Bptr = &B[0][k];  // points to the first element of column k in B
@@ -161,10 +161,10 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
             • The dynamic version must use a multiplication instruction to scale i by n, rather than a series of shifts and adds. On some processors, this multiplication can 
               incur a significant performance penalty, but it is unavoidable in this case.
 
-            * See textbook page 292 for C code and assembly that multiplies two VLA's and computes thier corresponding entry.
+            * See textbook page 292 for C code and assembly that multiplies two VLA's and computes their corresponding entry.
 
 
-    XI. Heterogenous Data Structures
+    XI. Heterogeneous Data Structures
 
         • C provides two mechanisms for creating data types by combining objects of different types:
 
@@ -190,10 +190,10 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
                 int *p      // 8 bytes, offset 52
                 };
 
-                * r is a pointer to rec (the addres of the struct)
+                * r is a pointer to rec (the address of the struct)
                 * i and j are field names inside the structure
 
-                - this can modeled by the following assembly code:
+                - this can be modeled by the following assembly code:
 
                     1   movl (%rdi), %eax      # load r->i into %eax
                     2   movl %eax, 4(%rdi)     # store %eax into r->j
@@ -213,7 +213,7 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
                     Registers: r in %rdi, i in %rsi
                     1 leaq 8(%rdi,%rsi,4), %rax 
 
-            • Finally we consider the the last example:
+            • Finally we consider the last example:
 
                 r->p = &r->a[r->i + r->j];
 
@@ -250,12 +250,12 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
 
                 - *size = 8 (the size of its largest field)
 
-            • If you know that only one of several fields will ever be used at a time, you don’t need separate memory for each field, so a Union
+            • If you know that only one of several fields will ever be used at a time, you don’t need separate memory for each field, so a union
               would be appropriate here:
 
                 - consider a binary tree, a data structure made up of nodes where each node can have at most two children
 
-                    -- internal nodes ave at least one child (left, right, or both), and do not store actual data, but 
+                    -- internal nodes have at least one child (left, right, or both), and do not store actual data, but 
                         exist to connect other nodes.
 
                     -- leaf nodes have no children (both left and right pointers are null) and store the actual data.
@@ -293,6 +293,92 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
 
                     -- n->data[0] and n->data[1] accesses the data stored in a leaf node
                     -- n->internal.left and n->internal.right accesses the children of an internal node
+
+            • With this encoding, however, there is no way for the compiler to determine whether a given node is a leaf or an internal node:
+
+                - A common method is to introduce an enumerated type defining the different possible choices for the union, and then create a
+                  structure containing a tag field and the union:
+
+                 typedef enum { N_LEAF, N_INTERNAL } nodetype_t;         // This creates a new type called nodetype_t and can only take two values: N_LEAF or N_INTERNAL.
+                 struct node_t {
+                     nodetype_t type;                                    // 'type' is a nodetype_t variable that stores whether the node is a leaf (N_LEAF) or an internal node (N_INTERNAL).
+                     union {                                             // this union is where the 'real' contents of the node live.
+                         struct {
+                             struct node_t *left;
+                             struct node_t *right;
+                         } internal;                                     // field name of the internal struct
+                         double data[2];
+                     } info;                                             // field name of the union
+                 };
+
+        C. Data Alignment
+
+            • Many computer systems place restrictions on the allowable addresses for primitive data types, requiring that the address for some objects 
+              must be a multiple of some value K (typically 2, 4, or 8).
+
+            • The x86-64 hardware will work correctly regardless of the alignment of data. However, Intel recommends that data be aligned to improve memory system performance.
+
+                - Their alignment rule is based on the principle that any primitive object of K bytes must have an address that is a multiple of K:
+                
+                    K   Types
+                    1   char
+                    2   short
+                    4   int, float
+                    8   long, double, char*
+
+            • For code involving structures, the compiler may need to insert gaps in the field allocation to ensure that each structure element satisfies its alignment requirement. 
+              The structure will then have a required alignment for its starting address:
+
+                struct example {
+                char c;    // size 1, alignment 1
+                int i;     // size 4, alignment 4
+                double d;  // size 8, alignment 8
+                };
+
+                - the struct above without padding has the following memory allocation:
+
+                    +----+--------+------------+
+                    |  c |   i    |     d      |
+                    +----+--------+------------+
+                    0    1        5            13
+
+                - since the largest field is double, the compiler needs an 8-byte alignment, so we would insert padding after the char
+
+                    +----+---------+---------+-------------+
+                    |  c | pad (3) |    i    |      d      |
+                    +----+---------+---------+-------------+
+                    0    1         4        8            16          
+
+                - now we have satisfied the following constraints:
+
+                    char c: 1-byte alignment     (c starts at a multiple of 1)
+                    int i: 4-byte alignment      (i starts at a multiple of 4)                    
+                    double d: 8-byte alignment   (d starts at a multiple of 8)
+
+                - it is important to note that any pointer to struct 'example' must also have an 8-byte alignment
+            
+            • Similarly, the compiler  may need to add padding to the end of the structure so that each element in an array of structures will satisfy its alignment requirement.
+
+            • Can we do better (i.e., use less memory)?
+
+                - declaring the largest element first can SOMETIMES reduce padding and save memory.
+                
+                - below is the same example struct with largest-first ordering:
+
+                    +------------+--------+----+---------+
+                    |     d      |   i    | c  | pad (3) |
+                    +------------+--------+----+---------+
+                    0            8        12   13        16
+
+                - in this example, largest-first ordering did not actually help us, but see the lecture slides for an example where it does!
+
+
+                    
+
+
+
+
+                
                     
                             
 
