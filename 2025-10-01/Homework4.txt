@@ -1,0 +1,77 @@
+Problem 0:
+
+    given:  %rbx = &counts[0],
+            %rdi = &links[0],
+            %rdx = i, 
+            %rcx = j
+
+        a.) counts[i]        movl (%rbx, %rdx, 4), %eax
+
+        b.) counts[j + 2]    movl 8(%rbx, %rcx, 4), %eax
+
+        c.) links[j]         movq (%rdi, rcx, 8), %rax
+
+        d.) *(links + 4)     movq 32(%rdi), %eax    *same as links[4]
+
+Problem 1:
+
+    a.) struct {
+            long q;     // offset: 0, size: 8 bytes
+            int l;      // offset: 8, size: 4 bytes
+            short w;    // offset: 12, size: 2 bytes
+            char b1;    // offset: 14, size: 1 byte
+            char b2;    // offset: 15, size: 1 byte
+        } mystruct;     // total bytes occupied: 16 
+
+    b.) struct {
+            char c;     // offset: 0, size: 1 byte (+1 for padding)      
+            short w;    // offset: 2, size: 2 bytes                      
+            int t;      // offset: 4, size: 4 bytes                      
+            long *foo;  // offset: 8, size: 8 bytes                      
+        } silly;        // total bytes occupied: 16 
+
+    c.) struct {
+            int i;              // offset: 0, size: 4 bytes
+            int j;              // offset: 4, size: 4 bytes
+            unsigned long foo;  // offset: 8, size: 8 bytes
+            long bar;           // offset: 16, size: 8 bytes
+        } record;               // total bytes occupied: 24 
+
+Problem 2:
+
+    typdef struct {
+        int foo;                            // offset: 0, size: 4 bytes (+4 for padding)     
+        long bar[3];                        // offset: 8, size: 24 bytes
+        unsigned short t;                   // offset: 32, size: 2 bytes (+6 for padding)
+    } csx;                                  // 40 bytes   
+    csx myarray[10];                        // 400 bytes
+    
+    * assuming the starting address of myarray is z:
+
+    a.) myarray takes up 400 bytes of space
+    b.) the address of myarray[3].t = z + 152
+    c.) the address of myarray[2].bar[2] is z + 104
+
+Problem 4:
+
+    *in general, for an array declared as T A[R][C], array element A[i][j] is at memory address:
+
+        &A[i][j] = xₐ + L(C * i + j), where L is the size of the data type T in bytes and C is the number of columns
+
+    *assuming A has 200 columns and is starting an address of 200000:
+
+    a.) the address of element A[47][101] is 200000 + 4(200(47) + 101) = 238004
+
+    b.) *if int *ptrs is a 10 x 20 2D array, then the address of the array element ptrs[i][j] can be accessed with the formula
+         &ptrs[r][c] = xₐ + L(C * r + c)   *L = 8, C = 20
+
+        - ptrs in %rbx, r in %rdi, and c in %rsi            now we obtain the following assembly code:
+
+            -- leaq (%rdi,%rdi,19), %rax – compute 20 * r                     *from (C * r)
+
+            -- leaq (%rbx,%rax,8), %rax – compute ptrs + 8(20r)               *from (ptrs + L(C * r))
+
+            -- movq (%rax,%rsi,8), %rax – read from M[(ptrs + 140r) + 8c]     *equivalently M[ptrs + 8(20r + c)]
+
+
+

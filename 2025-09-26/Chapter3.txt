@@ -187,7 +187,7 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
                 int i;      // 4 bytes, offset 0
                 int j;      // 4 bytes, offset 4
                 int a[10]   // 40 bytes, offset 8
-                int *p      // 8 bytes, offset 52
+                int *p      // 8 bytes, offset 48
                 };
 
                 * r is a pointer to rec (the address of the struct)
@@ -203,7 +203,7 @@ CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
                     -- r->j is at offset 4, so 4(%rdi) means "address in %rdi + 4".
 
                     summary: field j lives at offset 4 in the struct, so the previous line writes whatever is in %eax (the value of i) 
-                    that memory location: this overwrites the old value of j with the value of i, effectively copying the value of r->i to
+                    to that memory location: this overwrites the old value of j with the value of i, effectively copying the value of r->i to
                     to r->j.
 
                 - to generate a pointer to an object within a struct, we can simply add the field's offset to the structure address:
