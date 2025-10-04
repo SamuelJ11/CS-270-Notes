@@ -1,0 +1,143 @@
+CHAPTER 7: LINKING
+
+    • Linking is the process of collecting and combining various pieces of code and data into a single file that can be loaded into memory and 
+      executed.  
+
+        - linkers allow for separate combilation (modifying and compiling files seperately and relinking the application without having to 
+          recompile the other files)
+
+    • Understanding linkers will:
+
+        - help us build large programs by understanding how a linker resolves references using libraries
+
+        - help us avoid dangerous programming errors via incorrect definitions of global variables
+
+        - help us understand how language scoping rules are implemented (what does static mean, etc)    
+    
+
+    I. Compiler Drivers
+
+        • Typing "gcc -Og -v -o prog main.c sum.c" shows the full verbose compilation process:
+
+          1. the driver first runs the C preprocessor (cpp), which translates the C source file main.c into an ASCII intermediate file 'main.i'
+
+          2. next, the driver runs the C compiler (cc1), which translates 'main.i' into an ASCII assembly-language file 'main.s'
+
+          3. then, the driver runs the assembler (as), which translates 'main.s' into a binary relocatable object file 'main.o'
+
+          4. the driver goes through the same process to generate 'sum.o' 
+          
+          5. Finally, it runs the linker program ld, which combines 'main.o' and 'sum.o', along with the necessary system object files, to create the 
+             binary executable object file 'prog'
+
+        • When running the program with ./prog, the shell invokes a function in the operating system called the loader, which copies the code and 
+          data in the executable file 'prog' into memory, and then transfers control to the beginning of the program.
+
+
+    II. Static Linking
+
+        • Static linkers (like Linux’s ld) take relocatable object files and command-line arguments as input and produce a fully linked executable. 
+        
+          - these object files are divided into sections: one for instructions, one for initialized global variables, and another for uninitialized variables.
+
+        • To build the executable, the linker performs 2 main tasks:
+
+          1. symbol resolution: associate each symbol reference (function, global or static variables) to a single symbol definition
+
+          2. relocation: modifies all references to the symbols so that they point to a memory location arbitrarily picked by the linker following the detailed
+             instructions generated in the 'relocation entries' by the assembler
+
+
+    III. Object files
+
+        • Object files come in three forms:
+
+          1. relocatable object file: contains binary code and data in a form that can be combined with other relocatable object files at compile time to create an
+             executable object file
+
+          2. executable object file: contains binary code and data in a form that can be copied directly into memory and executed
+
+          3. shared object file: a special type of relocatable object file that can loaded into memory and linked dynamically (at either load or run time).
+
+        • Compilers and assemblers generate the relocatable object files, while linkers generate the executable.
+
+        • Object files are organized according to specific object file formats:
+
+          - Linux and Unix systems use Executable and Linkable Format (ELF).
+
+    IV. Relocatable Object Files
+
+        +----------------------+
+        |      ELF header      |
+        +----------------------+
+        |        .text         |  (program code)
+        +----------------------+
+        |       .rodata        |  (read-only data, e.g., constants, strings)
+        +----------------------+
+        |        .data         |  (initialized global variables)
+        +----------------------+
+        |        .bss          |  (uninitialized global variables)
+        +----------------------+
+        |       .symtab        |  (symbol table)
+        +----------------------+
+        |     .rel.text        |  (relocation info for .text)
+        +----------------------+
+        |     .rel.data        |  (relocation info for .data)
+        +----------------------+
+        |       .debug         |  (debugging info)
+        +----------------------+
+        |        .line         |  (line number info)
+        +----------------------+
+        |       .strtab        |  (string table)
+        +----------------------+
+        | Section header table |  (describes sections above)
+        +----------------------+
+
+        • The figure aboveshows the format of a typical ELF relocatable object file:
+
+          1. the header begins with a 16-byte sequence that describes the word size and byte ordering system that generated the file.
+
+            - the rest of the header includes the size of ELF header, object file type, machine type, the file offset of the section header table, and size and number of entries
+               in the header table
+          
+          2. '.text' is the machine code of the compiled program
+
+          3. '.rodata' is read-only data such as format strings and jump tables for switch statements
+
+          4. '.data' contains initialized global and static C variables
+
+          5. '.bss' contains uninitialized global and static C variables (and ones intitialized to zero). Since uninitialized variables do not have to occupy any actual
+              disk space on the object file, this section is merely a placeholder
+
+          6. '.symtab' is a symbol table with information about functions and global variables that are defined and referenced in the program
+              
+              -- you do not need to compile a program with the '-g' flag to get symbol table information - every relocatable object file has a symbol table in this section
+                 unless explicitly removed with the 'STRIP' command.
+
+              -- unlike the symbol table inside the compiler, the .symtab symbol table does NOT contain entries for local variables
+
+          7. 'rel.text' is a a list of locations in the '.text' section that will need to be modified when the linker combines this object file with others
+
+              -- not needed in executable object files and is usually omitted unless user explicitly instructs the linker to include it
+
+          8. '.rel.data' contains relocation information for any global variables that are referenced or defined by the object file
+
+          9. '.debug' contains a debugging symbol table with entries for local variables and typedefs, global variables, and the orginal C source file. 
+
+              -- compiler driver must be invoked with the '-g' flag
+
+          10. '.line' is a mapping between line numbers in the original C source program and machine code instructions in the '.text' section
+
+              -- compiler driver must be invoked with the '-g' flag
+
+          11. '.strtab' is a string table is a sequence of null-terminated character strings for the symbol tables in the .symtab and .debug sections.
+
+
+      V. Symbols and Symbol Tables
+
+
+
+          
+
+
+
