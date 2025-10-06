@@ -135,6 +135,117 @@ CHAPTER 7: LINKING
 
       V. Symbols and Symbol Tables
 
+        • Each relocatable object module 'm' has a symbol table that contains information about the symbols that are defined and referenced by 'm'.
+
+        • There are 3 different kinds of symbols:
+
+          - global symbols that are DEFINED by module 'm': correspond to non-static C functions and global variables
+
+          - global symbols that are REFERENCED by module 'm': these are called 'externals' and correspond to non-static C functions and global variables
+            defined in other modules
+
+          - local symbols: these are defined and referenced exclusively by module 'm'; static C functions and global variables defined with the 'static'
+            attribute
+
+        • Local procedure variables that are defined with the C static attribute are not managed on the stack. Instead, the compiler allocates space for each definition 
+          in the .data or .bss section and creates a local linker symbol with a unique name in the symbol table:
+
+            int f() {
+            static int x = 0;
+            return x;
+            }
+
+            int g() {
+                static int x = 1;
+                return x;
+            }
+
+            - in the code above, both functions are defined in the same module, and both define a static local variable 'x'
+
+            - You might think that since both functions have a variable named x, they somehow conflict — but they don’t; that’s because each static int x is:
+
+              -- local to the function (can’t be seen outside)
+              -- stored in global memory, not on the stack
+              -- given a unique name internally by the compiler
+
+            - for example, the compiler might use x.1 for the definition in function 'f' and x.2 for the definition in function 'g'
+
+          • The assembler creates the symbol table based on the symbols that the compiler includes in the assembly (.s) file, and this table in stored in the '.symtab' section
+
+          • Reference the struct below to visualize how symbols are stored inside an ELF:
+
+              typedef struct {
+              int name;            // String table offset
+              char type:4,         // Function or data (4 bits)
+                binding:4;         // Local or global (4 bits)
+              char reserved;       // Unused
+              short section;       // Section header index
+              long value;          // Offset or absolute address
+              long size;           // Object size in bytes
+              } Elf64_Symbol;
+
+              1. ELF files store symbol names (like "main" or "printf") in a string table, not directly in the struct (a byte offset pointing to where that name starts 
+                in the string table is used instead of the actual symbol names).
+
+              2. the 'type' is a 4-bit sequence that denotes what kind of symbol it is (function, variable, etc)
+
+              3. the 'binding' is a 4-bit sequence that denotes whether the symbol is local or global (determines symbol visibility to the linker)
+
+              4. 'reserved' is simply padding so the structure aligns properly in memory
+
+              5. the 'section' is a 2-byte sequence that denotes what section of the object file the symbol belongs to ('.text', '.rodata', etc)
+
+              6. the 'value' is an 8-byte sequence that denotes the symbols address (relative for relocatable object files, absolute for executable object files)
+
+              7. the 'size' is an 8-byte sequence that denotes the size of the symbol's object in bytes.
+
+          • The Elf64_Symbol struct is simply one entry in the '.symtab' section of the ELF file:
+
+              - a symbol in an ELF file is represented by the struct (like Elf64_Symbol)
+              
+              - the struct doesn’t hold the actual code or data — it holds metadata about that code or data (see previous bullet point)
+
+          • Each entry in the Symbol Header Table contains information like:
+
+              - section name (.text, .data, etc.)
+
+              - section type (code, data, symbol table, etc.)
+
+              - ize of the section
+
+              - file offset (where each section starts in the ELF file)
+
+              - memory address (where it should be loaded)
+
+              - alignment and flags
+
+          • Some symbols don’t belong to a real section in the section header table. These are called pseudosections:
+
+              - ABS	absolute symbols: symbols whose addresses should not be relocated
+
+              - UNDEF	undefined symbols: symbols that are referenced here but defined elsewhere (like an extern function or variable).
+
+              - COMMON: uninitialized data objects that haven’t been allocated yet (like global variables declared but not initialized).
+                            
+                -- for COMMON symbols, the 'value' field gives the alignment requirement, and 'size' gives the minimum size.
+
+                -- both COMMON and '.bss; are for uninitialized data, but '.bss' is used for static variables or variables explicitly initialized to zero, 
+                   while COMMON is for plain uninitialized globals.
+
+          • Use 'readelf' command in the bash terminal to see symbol information about 'main' and 'sum' in the 'prog' executable by typing the following commands:
+
+            - readelf -S prog   *display the section header table (all sections and their offsets, sizes, etc.)
+            - readelf -s prog   *display the actual symbol table (all symbols in .symtab)
+
+              -- for example, main and sum (executables) live in the '.text' section:
+
+              [14] .text             PROGBITS         0000000000001040  00001040
+                   0000000000000127  0000000000000000  AX       0     0     16
+
+              0000000000001147    32 FUNC    GLOBAL DEFAULT   14 sum
+
+              0000000000001129    30 FUNC    GLOBAL DEFAULT   14 main
+
 
 
           
