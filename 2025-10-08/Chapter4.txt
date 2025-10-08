@@ -1,0 +1,51 @@
+CHAPTER 4: PROCESSOR ARCHITECTURE
+
+    • The instructions supported by a particular processor and thier byte-level encodings are known as its instruction set architecture (ISA)
+
+        - The ISA provides a conceptual layer of abstraction between compiler writers and processor designers
+
+    • The ISA model would seem to imply seqential instruction execution, but in reality different parts of multiple instructions are executed 
+      simultaneously, allowing the processor to achieve higher performance
+
+        - exmaples including caching in web browsers, and information retrieval data structures such as a balanced binary tree and hash tables
+
+    • This chapter defines a simple instruction set that we use as a running example for our processor implementations: the 'Y86-64' instructions set,
+      modeled after the x86-64 instruction set.
+
+        - has fewer data types, instructions, and addressing modes, with simple byte-level encodings that make it easier to design the CPU's decoding
+          logic.
+
+    • For this chapter we will assume the Y86-64 processor is based on sequential operation, executing one complete instruction once per clock cycle
+
+        - with the sequential design as a basis, we then apply a series of transformations to create a 'pipelined' processor
+
+            -- the processor breaks down the execution of each instruction into 5 steps, each of which is handled by a seperate section or 'stage' of
+               the hardware
+
+        - since each stage is handled by a seperate region of the hardware, the processor can execute the different steps of up to five instructions
+          simultaneously
+
+            -- this requires handling a variety of hazard conditions (location or operands of one instruction depend on those of another still in the 
+               pipeline)
+
+    I. The Y86-64 Instruction Set Architecture
+
+        A. Programmer Visible state
+
+            • In computer architecture, 'state' refers to all the information inside the processor and memory that determines what the computer will do next.
+
+                - everything it “knows” right now that affects how it executes the next instruction.
+
+            • The “programmer-visible state” is the part of the state that a programmer (or compiler) can directly read from or write to using instructions.
+
+                - the state for Y86-64 is similar to that for x86-64. There are 15 program registers minus %r15 for simplicity.
+
+                - There are three single-bit condition codes: ZF, SF, and OF
+
+                - a final part of the program state is a status code Stat, indicating the overall state of program execution
+
+        B. Y86-64 instructions
+
+            
+    
+
