@@ -46,6 +46,52 @@ CHAPTER 4: PROCESSOR ARCHITECTURE
 
         B. Y86-64 instructions
 
-            
-    
+            • Only 8-byte integer operations for simplicity
+
+                - xxmovq: immediate to register (im), register to memory (rm), register to register (rr), memory to register (mr)
+
+                  -- the memory references for the two memory movement instructions have a simple base and displacement format (no scaling operations
+                     supported)
+
+                - OPq: addq, subq, andq, xorq only on register data
+
+                - jxx: jmp, jle, jl, je, jne, jge, and jg.
+
+                - cmovexx:  cmovle, cmovl, cmove, cmovne, cmovge, and cmovg - these have the same format as the register–register move instruction rrmovq
+
+                - push, pop, call and ret are the same
+
+                - halt: stops instruction execution and sets status code to HLT
+
+        C. Instruction encodings
+
+            • Reference page 385 in the textbook to understand the notes below:
+
+                - each instruction requires between 1 and 10 bytes
+
+                - every instruction has an initial byte that identifies the instruction type and is divided into two 4-bit parts: the high-order (code)
+                  part and the low-order (or function) part
+
+                    --  the function values are only meaningful in cases where a group of related instructions share a common code
+
+                  +----------------+---------+----------------+---------+----------------+---------+
+                  |   Operations   |  Code   |    Branches    |  Code   |     Moves      |  Code   |
+                  +----------------+---------+----------------+---------+----------------+---------+
+                  | addq           | 6 0     | jmp            | 7 0     | rrmovq         | 2 0     |
+                  | subq           | 6 1     | jle            | 7 1     | cmovle         | 2 1     |
+                  | andq           | 6 2     | jl             | 7 2     | cmovl          | 2 2     |
+                  | xorq           | 6 3     | je             | 7 3     | cmove          | 2 3     |
+                  |                |         | jne            | 7 4     | cmovne         | 2 4     |
+                  |                |         | jge            | 7 5     | cmovge         | 2 5     |
+                  |                |         | jg             | 7 6     | cmovg          | 2 6     |
+                  +----------------+---------+----------------+---------+----------------+---------+
+
+                - each of the 15 program registers has an associated register identifier (ID) ranging from 0 to 0xE (see page 387)
+
+                    -- the program registers are stored within the CPU in a register file, which is a small random-access memory where the register IDs serve as addresses
+
+                    -- in the figure on page 395, instructions that have no register operands (branches, call, ret), do not include a register specifier byte, and
+                       those that require only one register operand (irmovq, pushq, and popq) have the other register specifier set to value 0xF
+
+
 
