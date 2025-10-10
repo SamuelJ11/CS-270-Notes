@@ -121,3 +121,19 @@ CHAPTER 4: PROCESSOR ARCHITECTURE
 
         D. Y86-64 Exceptions
 
+            • Y86-64 exception codes are as follows:
+
+                - 1: AOK Normal operation
+
+                - 2: HLT halt instruction encountered
+
+                - 3: ADR Invalid address encountered
+
+                - 4: INS Invalid instruction encountered
+
+            • For Y86-64, the processor stops executing instructions when it encounters any of the listed exceptions. 
+            
+                - in a more complete design, the processor would typically invoke an exception handler — a procedure designated to handle the specific 
+                  type of exception encountered
+
+        E. Y86-64vPrograms
