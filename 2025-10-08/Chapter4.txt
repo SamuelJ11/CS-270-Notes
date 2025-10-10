@@ -93,5 +93,31 @@ CHAPTER 4: PROCESSOR ARCHITECTURE
                     -- in the figure on page 395, instructions that have no register operands (branches, call, ret), do not include a register specifier byte, and
                        those that require only one register operand (irmovq, pushq, and popq) have the other register specifier set to value 0xF
 
+                - some instructions require an additional 8-byte constant word, which can serve as the immediate data for irmovq, 
+                  the displacement for rmmovq and mrmovq address specifiers, and the destination of branches and calls
 
+                    -- branch and call instructions are given as absolute addresses for simplicity
+
+                - all instructions are generated in little-endian 
+
+                - example: generate the byte encoding of the instruction rmmovq %rsp,0x123456789abcd(%rdx) in hexadecimal
+
+                    -- referencing figure 4.2 we see that:
+
+                        rrmovq has the initial byte enocoding of '40'
+
+                        register %rsp has the encoding '0x4'
+
+                        register %rdx has the encoding '0x2'
+
+                        immediate value in little endian padded to 8 bytes is: 0xcdab896745230100
+
+                        byte encoding: 4042cdab896745230100
+
+            • Every instruction has a unique combination of code and function in its initial byte, and given this byte, we can determine the length and meaning of
+              any additional bytes. 
+              
+                - this property ensures that a processor can execute an objectcode program without any ambiguity about the meaning of the code
+
+        D. Y86-64 Exceptions
 
