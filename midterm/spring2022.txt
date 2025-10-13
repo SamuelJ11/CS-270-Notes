@@ -176,9 +176,3 @@ Problem 9.  Consider the following declaration of an array of structures:
         f. sa[2].x
         
             • offset = (2 x 32) + 16 = 80
-        
-      
-
-
-            
-
