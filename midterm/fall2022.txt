@@ -111,6 +111,44 @@ the left are the addresses of the instructions. Circle the number of the best an
     %rsp contain after they are completed?
         • first two instructions decrement stack pointer, then the final instruction increments it
         • x − 8
+
+Problem 8.  A C function of type int f(long x) compiles (with -Og) to the
+following assembly code:
+
+    movl $0, %eax
+    .L2:
+    testq %rdi, %rdi
+    je .L4
+    movl %edi, %edx
+    andl $1, %edx
+    addl %edx, %eax
+    sarq %rdi
+    jmp .L2
+    .L4:
+    ret
+
+    Which of the following is the C code for f()?
+        • int count=0;
+          while (x) {
+          count += x & 1;
+          x >>= 1;
+          }
+          return count;
+
+Problem 9:  Consider this function:
+        long foo(long x, long y) {
+        if (x > y)
+        return x - y;
+        else
+        return y - x;
+        }
+
+        Circle the letter of the instruction sequence below that resulted from compiling (using -Og)
+        the above code. Recall that the first argument is passed in %rdi, the second in %rsi, and
+        return values are passed in %rax.
+
+        
+
         
 
 
