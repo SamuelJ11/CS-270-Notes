@@ -147,6 +147,49 @@ Problem 9:  Consider this function:
         the above code. Recall that the first argument is passed in %rdi, the second in %rsi, and
         return values are passed in %rax.
 
+            •   movq %rdi, %rax        # rax = x
+                cmpq %rsi, %rdi        # compare x:y
+                jle .L2                # jump if x <= y
+                subq %rsi, %rax        # rax = x - y
+                ret
+                .L2:
+                subq %rdi, %rsi        # rsi = y - x
+                movq %rsi, %rax        # rax = y - x
+                ret
+
+Problem 10:  Consider the following declaration of an array of structures:
+            struct {
+            short s;        // initial offset: 0 
+            char name[16];  // initial offset: 2
+            int *x;         // initial offset: 24 (+6 for padding)
+            } sa[10];       // total space = 320 bytes
+
+        (a) How many bytes in memory will this array occupy in total?
+            • 320 bytes
+
+        (b) If the starting address of sa is x, what is the address of sa[4].s?
+            • x(4)(32) + 0 = x + 128
+
+        (c) If the starting address of sa is x, what is the address of sa[1].name[5]?
+            • x(1)(32) + 2 + 5 = x + 39
+
+        (d) A program places the string "Ben Q. Bitdiddle" into the name field of one element,
+        and sets the x field to an address in high memory. If the program later calls a system
+        function (like strlen()) to determine the length of the string, what bad consequence
+        might result?
+            • segmentation fault, because the string is not null-terminated.
+
+Problem 11:  Briefly describe the step(s) you took to determine the correct
+input for the first phase of the “bomb” project.
+
+            • I inspected the contents of registers that appeared near any comparison statements, and in doing so I found the string
+              that I needed to match my input with
+
+
+        
+
+
+
         
 
         
