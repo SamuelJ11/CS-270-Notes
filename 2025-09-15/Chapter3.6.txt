@@ -1,0 +1,419 @@
+CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
+
+    VI. Control
+
+    • Normally statements are executed sequentially (in the order they appear), but this order can be altered with a jump instruction (usually contingent upon the result of some test)
+
+    A. Condition Codes  
+
+        • In addition to the general purpose registers, the CPU maintains a set of single-bit condition code registers which are tested to perform conditional branches
+
+            - Carry flag        (The most recent operation generated a carry out of the most significant bit)
+            - Zero flag         (The most recent operation yielded zero)
+            - Sign flag         (The most recent operation yielded a negative value)
+            - Overflow flag     (The most recent operation caused a two’s-complement overflow)
+
+        • For the logical operations, such as xor, the carry and overflow flags are set to zero. 
+        
+        • For the shift operations, the carry flag is set to the last bit shifted out, while the overflow flag is set to zero.
+
+        • There are two instruction classes (having -b, -w, -l, -q forms) that set condition codes without altering any other registers:
+
+            - the CMP instructions set the condition codes according to the difference of their two operands (D - S) - they set the zero flag if the two operands are equal
+
+            - the TEST instructions behave in the same manner as the AND instructions except without altering their destination
+
+    B. Accessing the Condition Codes
+
+        • The SET instruction class allows us to set a single byte to 0 or 1 depending on some combination of the condition codes
+
+            - IMPORTANT!!:  the suffixes for these conditions do NOT specify operand sizes
+
+            - see page 231 for the flags checked for set operations
+
+        • A SET instruction has either one of the low-order single-byte register elements or a single-byte memory location as its destination, setting this byte to either 0 or 1
+        
+            - for example, if we wanted to check if a < b:
+
+            (a in %rdi, b in %rsi)
+
+            comp:
+                cmpq %rsi, %rdi     (b - a)
+                setl %al            (if SF ^ OF, set low-order byte of %eax (%ax) to 1)
+                movzbl %eax         (clears remaining bits of %eax **and %rax**)  ** In x86-64, any instruction that writes to a 32-bit register will automatically zero out 
+                ret                                                                  the upper 32 bits of the corresponding 64-bit register
+
+        • It is important to note how machine code does or does not distinguish between signed and unsigned values
+
+            - some circumstances require different instructions to handle signed and unsigned operations, such as using different versions of right shifts, div and mult instructions, etc
+
+    C. Jump Instructions
+
+        • Two of the jmp instruction jump unconditionally - it can be either a direct or indirect jump:
+
+            - direct jumps use labels: jmp .L1
+
+            - indirect jumps use the * followed by an operand specifier: jmp *%rax (uses the value in %rax as the jump target) 
+
+        • The remaining jumps are conditional, and these jumps require a label, i.e. they can only be direct (see textbook page 234 for examples)
+
+    D. Jump Instruction Encodings
+
+        • The two most common types of encodings for the jmp instruction are PC relative and absolute jumps:
+
+            - PC relative:  encodes the difference between the address of the target instruction and the address of the instruction immediately following the jump
+
+                -- these offsets can be encoded using 1, 2 or 4 bytes
+
+            - Absolute:  4 bytes are used to directly specify the target
+
+        • A summary of the jump types is given in a table below:
+
+            | Jump Type   | Operand Type               | Encoded in machine code                          |
+            | ----------- | -------------------------- | ------------------------------------------------ |
+            | Direct      | Label                      | PC relative or Absolute                          |
+            | Conditional | Label                      | PC-relative offset                               |
+            | Indirect    | Register or memory pointer | Uses **value in register/memory**, not an offset |
+
+        • The assembler and linker select the appropriate encodings for the jmp instruction
+
+        • Consider the following example below:
+
+            1 movq %rdi,%rax
+            2 jmp .L2
+            3 .L3:
+            4 sarq %rax
+            5 .L2:
+            6 testq %rax,%rax
+            7 jg .L3
+            8 rep;ret
+
+            // disassembled version of the above machine code
+            
+            1 0: 48 89 f8     mov %rdi,%rax
+            2 3: eb 03        jmp 8 <loop+0x8>  
+            3 5: 48 d1 f8     sar %rax         
+            4 8: 48 85 c0     test %rax,%rax
+            5 b: 7f f8        jg 5<loop+0x5>
+            6 d: f3 c3        repzretq
+
+            - in the disassembled code, the first jump starts at address 0x3, with the next address at 0x5 
+
+            - the offset for the first jump (0x3) is calculated as the (address of the target (0x8)) - (the address of the next instruction (0x5))  
+
+            - the second jump starts at address 0xb, with the next address at 0xd
+
+            - the offset for the second (0xf8) jump is subsequently calculated as (0x5 - 0xd)   *0x5 − 0xd = -8, written as 0xf8 in two’s complement.
+
+    E. Implementing Conditional Branches with Conditional Control
+
+        • The most general way to translate conditional and unconditional expessions and statements from C into machine code is to use a combination of conditional and 
+          unconditional jumps
+
+        • Assembly doesn’t have 'if-else' directly: it only has conditional jumps, so compilers usually follow this template:         
+
+            t = test-expr;    // evaluate expression
+            if (!t)           // if test-expr == 0 (false) ...
+                goto false;   // jump to the false branch
+
+            then-statement    // if we didn’t jump, that means t != 0, so execute the "then" branch
+
+            goto done;        // skip over the else branch
+
+            false:
+            else-statement
+
+            done:
+
+    F. Implementing Conditional Branches with Conditional Moves
+
+        • The conventional way to implement conditional operations is through a conditional transfer of control:
+
+            - use a branching to jump to different code depending on the condition
+
+        • A more efficient strategy  is through a conditional transfer of data:
+
+            - compute both possible results, then use a special instruction to select the correct one without branching.
+
+        •  Compare both forms of C code and thier corresponding machine code representations to see how conditional data transfers are more efficient:
+       
+            C code                                             Assembly
+            ------------------------------------------------   ----------------------------------------
+            long absdiff_se(long x, long y) {                  absdiff_se:              # x in %rdi, y in %rsi
+                long result;                                   cmpq %rsi, %rdi          # Compare x:y
+                if (x < y) {                                   jge .L2                  # If >= goto x_ge_y
+                    lt_cnt++;                                  addq $1, lt_cnt(%rip)    # lt_cnt++
+                    result = y - x;                            movq %rsi, %rax
+                }                                              subq %rdi, %rax          # result = y - x
+                else {                                         ret                      # Return
+                                                            .L2:
+                    ge_cnt++;                                  addq $1, ge_cnt(%rip) # ge_cnt++
+                    result = x - y;                            movq %rdi, %rax
+                }                                              subq %rsi, %rax      # result = x - y
+                return result;                                 ret                  # Return
+            }                                                 
+
+            C code                                             Assembly
+            ------------------------------------------------   ----------------------------------------
+            long absdiff(long x, long y) {                     absdiff:             # x in %rdi, y in %rsi
+                long result;                                   movq %rsi, %rax      # rax = y
+                if (x < y)                                     subq %rdi, %rax      # rval = y - x
+                    result = y - x;                            movq %rdi, %rdx      # rdx = x
+                else                                           subq %rsi, %rdx      # eval = x - y
+                    result = x - y;                            cmpq %rsi, %rdi      # Compare x:y
+                return result;                                 cmovge %rdx, %rax    # If >=, rval = eval
+            }                                                  ret                  # Return
+
+        • Modern Processors use pipelining, where an instruction is broken into stages, each performing one small portion of the required operation
+
+            - multiple stages can thus be overlapped in the pipeline, but to do this requires being able to determine the sequence of instructions to be executed well ahead of time
+
+                -- the processor cannot do this when it encounters a conditional jump: the branch condtion must be evaluated first
+            
+            - modern CPU's can guess the outcome of a branch with around %90 accuracy, but if the guess is wrong, all instructions loaded along the wrong path must be discarded
+
+                -- this misprediction can incur a serious performance penalty
+
+        • Below is a figure showing the condtional move insructions:
+
+            Instruction   Synonym    Condition (flags)                   Meaning
+            ---------------------------------------------------------------------------
+            cmove   S,R   cmovz         ZF                               Equal / zero
+            cmovne  S,R   cmovnz        ~ZF                              Not equal / not zero
+            cmovs   S,R                 SF                               Negative
+            cmovns  S,R                 ~SF                              Nonnegative
+            cmovg   S,R                 ~(SF ^ OF) & ~ZF                 Greater (signed >)
+            cmovge  S,R   cmovnl        ~(SF ^ OF)                       Greater or equal (signed >=)
+            cmovl   S,R                 (SF ^ OF)                        Less (signed <)
+            cmovle  S,R   cmovnle       (SF ^ OF) | ZF                   Less or equal (signed <=)
+            cmova   S,R                 ~CF & ~ZF                        Above (unsigned >)
+            cmovae  S,R   cmovnb        ~CF                              Above or equal (unsigned >=)
+            cmovb   S,R                 CF                               Below (unsigned <)
+            cmovbe  S,R   cmovna        CF | ZF                          Below or equal (unsigned <=)
+
+            - the source and destination values can be 16, 32 or 64 bits 
+            
+            - the assembler can determine the operand length of a conditonal move from the name of the destination register 
+
+        • In conditional data transfer, both expressions are computed first, and the result is chosen with a conditional:
+
+            - model:  v= test-expr ? then-expr : else-expr;
+
+            - implementation:   v = then-expr;
+                                ve = else-expr;
+                                t = test-expr;
+                                if (!t) v = ve;
+
+        • Not all conditional expressions can be compiled using conditional moves
+
+            - if either of these two expressions could potentially cause an error or have a side effect, this could result in invalid behavior
+
+    G. Loops
+
+        • The general form of a do-while loop is given below:
+
+            do
+                body-statement
+                while (test-expr);
+
+            - the loop repeats while the test-expr returns a non-zero value, and the body statement is executed at least once
+
+            - this code can then be translated into conditionals and goto statements;
+            
+            loop:
+                body-statement
+                t = test-expr;
+                if (t)
+                    goto loop;
+
+        • There are two main ways a while loop is translated to machine code:
+        
+            - in the 'jump to middle' translation, there is an unconditional jump to the test at the end of the loop:                                                      
+
+                long fact_while(long n)             fact_while:
+                {                                       movl $1, %eax
+                    long result = 1;                    jmp .L6
+                    while (n > 1) {                  .L5: imulq %rdi, %rax
+                        result *= n;                    subq $1, %rdi
+                        n = n - 1;                   .L6: cmpq $1, %rdi 
+                    }                                   jg .L5
+                    return result;                      rep; ret
+                }
+
+            - the second translation method is known as a 'guarded do', in which the code is translated into a do-while loop by using a conditional branch to skip over
+              the loop if the initial test fails:
+
+                t = test-expr;
+                if (!t) 
+                    goto done;
+                loop:
+                    body-statement
+                    t = test-expr;
+                    if (t) 
+                        goto loop;
+                done:
+
+                * gcc follows this strategy when compiled with higher levels of optimization (-O1, -O2)
+
+        • The general form of for-loops is as follows:
+
+            for(init-expr; test-expr; update-expr)
+                body-statement
+
+            - below is the machine code of the two types of translations
+
+                Jump-to-middle                              Guarded-do
+                ----------------                            ----------------
+                init-expr;                                  init-expr;
+                goto test;                                  t = test-expr;
+                loop:                                       if (!t) goto done;
+                    body-statement                          loop:
+                    update-expr;                                body-statement
+                test:                                           update-expr;
+                    t = test-expr;                              t = test-expr;
+                    if (t) goto loop;                           if (t) goto loop;
+                                                            done:
+
+    H. Switch statements
+
+        • Switch statements provide a multiway branching capability based on the value of an integer index - very useful when there is a large number of outcomes
+
+            - uses a data structure called a 'jump table' - an array where entry i is the address of a code segment implementing the action the program 
+              should take when the switch index equals i
+
+            - the time taken to perform the switch is independent of the number of switch cases (unlike if-else chains)
+
+            - example of a function implementing a switch case is given below
+
+                    (a) Switch statement                       (b) Machine code translated back into C
+                    --------------------                       ---------------------------------------
+                    void switch_eg(long x, long n,             void switch_eg_impl(long x, long n, long* dest)
+                    long* dest)                                {
+                    {                                               static void* jt[7] = {&&loc_A, &&loc_def, &&loc_B,
+                        long val = x;                                   &&loc_C, &&loc_D, &&loc_def, &&loc_D};
+                        switch(n)                                   unsigned long index = n - 100;
+                        {                                           long val;
+                            case 100:                               if (index > 6) 
+                                                                        goto loc_def;
+                                val *= 13;                          goto *jt[index];
+                                break;                          loc_A: /* Case 100 */
+                            case 102:                               val = x * 13;
+                                val += 10;                          goto done;
+                                /*Fallthrough*/                 loc_B: /* Case 102 */
+                            case 103:                               x = x + 10;
+                                val += 11;                      loc_C: /* Case 103 */
+                                break;                              val = x + 11;
+                            case 104:                           goto done;
+                            case 106:                           loc_D: /* Cases 104, 106 */
+                                val *= val;                         val = x * x;
+                                break;                          goto done;
+                            default:                            loc_def: /* Default case */
+                                val = 0;                            val = 0;
+                        }                                       done:
+                        *dest = val;                                *dest = val;
+                    }                                             }
+
+                    (c) Assembly code
+                    ----------------
+                    void switch_eg(long x, long n, long* dest)
+                    xin %rdi, n in %rsi, dest in %rdx
+                    1 switch_eg:
+                    2 subq $100, %rsi               Compute index = n - 100
+                    3 cmpq $6, %rsi                 Compare index : 6
+                    4 ja .L8                        If >, goto loc_def
+                    5 jmp *.L4(,%rsi,8)             Goto *jt[index]
+                    6 .L3: loc_A:
+                    7 leaq (%rdi,%rdi,2), %rax      3*x
+                    8 leaq (%rdi,%rax,4), %rdi      val = 13*x
+                    9 jmp .L2                       Goto done
+                    10 .L5: loc_B:
+                    11 addq $10, %rdi               x = x + 10
+                    12 .L6: loc_C:
+                    13 addq $11, %rdi               val = x + 11
+                    14 jmp .L2                      Goto done
+                    15 .L7: loc_D:
+                    16 imulq %rdi, %rdi             val = x * x
+                    17 jmp .L2                      Goto done
+                    18 .L8: loc_def:
+                    19 movl $0, %edi                val = 0
+                    20 .L2: done:
+                    21 movq %rdi, (%rdx)            *dest = val
+                    22 ret                          Return
+
+                - the array jt in (b) contains seven entries, each of which is the address of a block of code (these are used with && to denote code locations, not with &
+                  which denotes data values)
+
+                    -- these locations are defined by labels in the assembly code (c) 
+
+                - the original C code has cases for values 100, 102-104 and 106, but n can be an arbitrary integer
+
+                    -- to create the corresponding indices of the jt, the compiler shifts the range to between zero and six by subracting 100 from n (i.e. if n = 106, then
+                       index = 106 - 100 = 6).  These values are stored in the 'index' variable in the original C version
+
+                - the index variable is then treated by the compiler as an unsigned value, simplifying the branching possibilities:
+
+                    -- two’s-complement math guarantees that all negative indices become huge unsigned numbers, so a single test index > 6 correctly filters:
+
+                        if n < 100 (signed) → n > 100 (unsigned) → jump to default
+
+                        if n > 106 (signed/unsigned) → jump to default
+
+                - there are 5 distinct locations to jump to:
+
+                    -- loc_A (.L3)
+                    -- loc_B (.L5)
+                    -- loc_C (.L6)
+                    -- loc_D (.L7)
+                    -- loc_def (.L8)
+
+                - the key step in executing a switch statement is to access a code location through a jump table, which corresponds to the 'goto *jt[index];'
+                  in the extended C code
+
+                - in the assembly code version, line 5 has the jump instruction prefixed with a "*" to indicate an indirect jump
+                    
+                - the operand specifies a memory location indexed by register %rsi (index):
+
+                    -- .L4 is the base of the jump table.
+
+                    -- %rsi * 8 (,%rsi,8) computes the index scaled by the size of a pointer (8 bytes).
+
+                    -- *.L4 + (,%rsi,8) gives the memory location of the code pointer to jump to, and the * dereferences that memory, and fetches the absolute target address from memory
+
+            - in the assembly code, the jump table is located in the segment of the object code file called .rodata (read-only data):
+
+                    .section     .rodata
+                    .align 8
+                .L4:
+                    .quad .L3    # Case 100: loc_A
+                    .quad .L8    # Case 101: loc_def
+                    .quad .L5    # Case 102: loc_B
+                    .quad .L6    # Case 103: loc_C
+                    .quad .L7    # Case 104: loc_D
+                    .quad .L8    # Case 105: loc_def
+                    .quad .L7    # Case 106: loc_D
+                    
+                    -- .align 8 → Make sure the data starts at an address divisible by 8 bytes (needed for 64-bit addresses).
+
+                    -- .L4: → This is a label marking the start of the jump table. Its address is the base for indexing.
+
+                    -- each .quad stores an 8-byte address of a code label. For example, .L3 is where case 100’s code starts.
+
+        • The key point is to see that the use of a jump table requires only a single jump table access, even if there are hundreds of cases.
+
+
+
+
+
+
+
+
+
+
+        
+
+
+
+        
+                                                                 
+
+

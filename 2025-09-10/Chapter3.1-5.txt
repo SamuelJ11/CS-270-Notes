@@ -1,0 +1,457 @@
+CHAPTER 3: MACHINE LEVEL REPRESENTATIONS OF PROGRAMS
+
+    I.  A Historical Perspective
+
+        • The GCC compiler generates its ouput in the form of assembly code, then invokes both an assembler and a linker to generate the executable
+          machine code from the assembly code        
+
+        • The intel processor line known as x86 had implemented backwards compatibility with each successive iteration of its processors since 1978.
+
+            - there are many strange artifacts in the instruction set due to this evolutionary heritage
+
+        • Intel’s early CPUs were named with numbers ending in “86” (8086, 80286, i386, i486).
+
+        • After the i486, Intel switched naming schemes (e.g., “Pentium”), but people still used x86 as a shorthand for the whole line.
+
+
+    II. Program Encodings
+
+        • The gcc command invokes the gcc C compiler (default compiler for Linux systems)
+
+        • The command line option -Og instructs the compiler to apply a level of optimization that yeilds machine code that follows
+              the overall structure of the original source code:
+
+            - it is a special option meant for debugging and learning (applies some optimizations but you can still see the relationship between the source code and machine code)
+
+        • The sequence of executions of the gcc command is as follows:
+
+            - (1) the C preprocessor expands the source code to include any files specified with #include and macro (#define) declaration
+
+            - (2) the compiler generates assembly code versions of the source file(s) with the .s suffix
+
+            - (3) the assembler converts the assembly code into binary object-code files with the .o suffix
+
+                -- these files contain binary representations of all the instructions, but the global variables are not yet filled in
+
+            - (4) the linker merges these object-code files along with code implementing library functions and generates the final excecutable
+                  with the name specified by the -o command.
+
+            A. Machine Level Code
+
+                • computer systems employ several different forms of abstraction, hiding details of an implementation through the use of a simpler abstract model.
+
+                    - (1) the format and behavior oof a machine-level program is defined by the instruction set architecture (ISA)
+
+                         -- even though the CPU runs things in parallel, it has to preserve the illusion that instructions ran one by one, in order
+
+                         -- this means the observable behavior (the values in registers, memory, etc.) will always match the sequential model defined by the ISA.
+
+                    - (2) the memory addresses used by a machine-level program are virtual addresses:
+
+                        -- when a program runs, it thinks it has access to one big, continuous block of memory (like a huge array of bytes starting at address 0),
+                           called virtual addresses.
+
+                        -- The actual implementation of the memory system involves a combination of multiple hardware memories and operating system software
+
+                • The machinecode forx86-64 differs greatly from the original C code. Parts of the processor state are visible that normally are hidden from the C programmer:
+
+                    - the program counter (PC and %rip in x86-64) indicates the address in memory of the next instruction to be executed
+
+                    - the integer register file contains 16 named locations storing 64-bit values that correspond to addresses (C pointers) or integer data
+
+                    - the condition code registers hold status information about the most recently executed arithmetic or logical instruction (used to implement conditional changes 
+                      like if-else and while statements)
+
+                    - (3) a set of vector registers can each hold one or more integer or floating-point values
+
+                • The program memory is addressed using virtual addresses  of which only a limited subrange are available (upper n-bits set to 0)
+
+                    - the operating system manages this virtual address space, translating vitual addresses into the physical addresses of values actually strored in processor memory.
+
+            B. Code Examples
+
+                • The -S flag was used to tell the gcc compiler to generate an assembly file mstore.s but go no further
+
+                • The assembly code file contains various declarations, including the code block shown below:
+
+                    - multstore:
+                        pushq	%rbx                      
+                        movq	%rdx, %rbx
+                        call	mult2@PLT
+                        movq	%rax, (%rbx)
+                        popq	%rbx
+                        ret
+
+                • Each line in the code corresponds to a single machine instruction:
+
+                    - for example, the pushq instruction indicates the contents of register %rbx should be pushed onto the program stack
+
+                • Using the -c flag, gcc will both compile and assemble the Code
+
+                • To actually inspect the contents of machine-code files, a class of programs known as disassemblers can be invaluable
+
+                    - the program OBJDUMP can serve this role given the -d command-line flag after the object file has been created (objdump -d mstore.o) which yeilds the following:
+
+                        0000000000000000 <multstore>:
+                            0:   f3 0f 1e fa             endbr64
+                            4:   53                      push   %rbx
+                            5:   48 89 d3                mov    %rdx,%rbx
+                            8:   e8 00 00 00 00          call   d <multstore+0xd>
+                            d:   48 89 03                mov    %rax,(%rbx)
+                            10:   5b                     pop    %rbx
+                            11:   c3                     ret
+
+                    - On the left are the 14 hexadecimal byte values that each encode the relevant instruction
+
+                    - On the right is the corresponding assembly language
+
+                • x86-64 instructions vary in length (1–15 bytes), so some are short (push %rbx = 1 byte) and some longer (call with an address = 5 bytes).
+
+                • The instruction set is designed so that from a given starting point, each byte sequence decodes to exactly one valid instruction (no ambiguity).
+
+                • Dissasemblers working purely from the object files, they do not need access to the source code.
+
+                • Naming conventions differ slightly: GCC often uses suffixes like q for operand size (pushq), while objdump may omit them (push).
+
+
+    III. Data Formats
+
+        • Due to its origins as a 16-bit architecture that expanded into a 32-bit one, Intel used the term "word" to refer to a 16-bit data type:
+
+            - 32 bit quantities are designated as "double words"
+
+            - 64 bit quantities are designated as "quad words"
+        
+        • Most assembly-code instructions generated by gcc have a single-character suffix denoting the size of the operand (movb = move byte, movl = move double word, etc).
+
+
+    IV. Accessing information
+
+        • An x68-64 central processing unit (CPU) contains a set of 16 general purpose registers storing 64-bit values.  
+
+            - thier names all begin with %r, but otherwise follow multiple different naming conventions:
+
+                -- the original 8086 had eight 16-bit registers, named %ax through %bp
+
+                -- in the extension to x86-32, the original eight registers were expanded to 32 bits, labled %eax through %eap
+                
+                -- then after the extension to x86-64k, the 32-bit registers were expanded to 64 bits, labeled %rax through %rbp
+
+                -- in additon, eight new registers were added: %r8 through %r15
+
+            - a summary of the registers and what they store is given below:
+
+                %rax  - Return value of a function
+                %rbx  - Callee-saved, general-purpose
+                %rcx  - 4th function argument
+                %rdx  - 3rd function argument
+                %rsi  - 2nd function argument
+                %rdi  - 1st function argument
+                %rbp  - Callee-saved frame pointer (start of stack frame)
+                %rsp  - Stack pointer (top of stack)
+                %r8   - 5th function argument
+                %r9   - 6th function argument
+                %r10  - Caller-saved, temporary
+                %r11  - Caller-saved, temporary
+                %r12  - Callee-saved, general-purpose
+                %r13  - Callee-saved, general-purpose
+                %r14  - Callee-saved, general-purpose
+                %r15  - Callee-saved, general-purpose
+
+        • The key point is what happens to the rest of the register when you write fewer than 8 bytes.• Byte level operations can only access the least signifcant byte of the 16 registers, 16-bit operations can access the least significant
+          2 bytes, and so on.
+
+        • When instructions have registers as destinations, two conventions arise:
+
+            - for instructions that generate 1 or 2 byte quantities, only those bytes in the destination register are changed
+
+            - for instructions that generate 4 byte quantites set the upper 4 bytes of the destination register to zero
+        
+        A. Operand Specifiers
+
+            • Most instructions have one or more operands specifying the source values to use in performing an operation and the destination location in to which to place the result
+
+                Type        Form          Operand Value          Name
+                ----------------------------------------------------------
+                Immediate   $Imm          Imm                    Immediate
+                Register    ra            R[ra]                  Register
+                Memory      Imm           M[Imm]                 Absolute
+                Memory      (ra)          M[R[ra]]               Indirect
+                Memory      Imm(rb)       M[Imm+R[rb]]           Base+displacement
+                Memory      (rb,ri)       M[R[rb]+R[ri]]         Indexed
+                Memory      Imm(rb,ri)    M[Imm+R[rb]+R[ri]]     Indexed
+                Memory      (,ri,s)       M[R[ri]*s]             Scaled indexed
+                Memory      Imm(,ri,s)    M[Imm+R[ri]*s]         Scaled indexed
+                Memory      (rb,ri,s)     M[R[rb]+R[ri]*s]       Scaled indexed
+                Memory      Imm(rb,ri,s)  M[Imm+R[rb]+R[ri]*s]   Scaled indexed
+
+                - some important things to consider when reading this table:
+
+                    -- ra: an arbitrary (general) register that contains either data or a memory address
+                    -- rb: a base register, that holds a base address for a memory access (other values, like an index or a displacement, are added to it to find the final, effective memory address)
+                    -- ri: an index register holds a value used as an offset to a base address.  its primary purpose is to help access elements within a data structure, like an array 
+                    -- $lmm: denotes a literal constant
+                    -- lmm: denotes a memory address
+                    -- s: the scale value is some constant (1, 2, 4, or 8) that is multiplied by the index register  
+
+                    -- R[]: this is a "register dereference" that finds the value of the contents inside the brackets
+                    -- M[]: this is a "memory dereference" that find value at the 'effective memory address' calculated inside the brackets
+
+                    for example:
+
+                    -- R[ra]: this fetches the value contained within the register ra
+                    -- M[R[ra]]:  here R[ra] must return a memory address because it is encapsulated in M[]
+                    -- M[R[rb] + R[ri]*s + Imm]: the effective memory address is calculated by taking the contents of the base register (R[rb], which holds an address), 
+                                                 adding the scaled value of the index register (R[ri] * s), and finally adding the immediate constant (Imm). 
+                                                 this calculated effective memory address is then dereferenced via M[] to return the value.
+
+                - below is an excersize to help make this information more concrete:
+
+                    Assume the following values are stored at the indicated memory addresses and registers:
+
+                    Address   Value        Register   Value
+                    0x100     0xFF         %rax       0x100
+                    0x104     0xAB         %rcx       0x1
+                    0x108     0x13         %rdx       0x3
+                    0x10C     0x11
+
+                    Fill in the following table showing the values for the indicated operands:
+
+                    Operand                 Value
+                    %rax                    0x100  (value stored in the register)
+                    0x104                   0x104  (immediate literal interpreted as a value)
+                    $0x108                  0x108  (the dollar sign explicitly denotes an immediate constant)
+                    (%rax)                  0xFF   (read the value from memory at the address stored in %rax)
+                    4(%rax)                 0xAB   (read the value from memory at the effective address of %rax + 4)                 
+                    9(%rax,%rdx)            0x11   (read the value from memory at the effective address of %rax + %rdx displaced by 9)
+                    260(%rcx,%rdx)          0x13   (read the value from memory at the effective address of %rcx + %rdx displaced by 260)
+                    0xFC(,%rcx,4)           0xFF   (read the value from memory at the effective address of (%rcx scaled by 4) displaced by 0xFC)
+                    (%rax,%rdx,4)           0x11   (read the value from memory at the effective address of %rax + (rdx scaled by 4))
+
+        B. Data Movement instructions
+
+            • The simplest form of data movement instructions are part of the MOV class.
+
+                - these instructions copy data from a source location to a destination, without any transformation
+
+                - there are four instructions in this class: 
+
+                    -- movb (1 byte)
+                    -- movw (2 bytes)
+                    -- movl (4 bytes)
+                    -- movq (8 bytes)   *must fit in 32 bits
+                    -- movabsq          *sign extended to fill 64 bits
+
+                    IMPORTANT: the destination register MUST MATCH the size indicated by the instruction suffix
+
+            • The source operand designates a value that that is immediate, stored in a register, or stored in memory.
+
+            • The destination operand must either be a register or memory location.
+
+            • x86-64 imposes the restriction that a move instruction cannot have both operands refer to memory locations (cannot copy from one memory address to another in one operation).
+
+                - first the source value must be loaded onto a register, then written to the destination
+
+            • For most cases, the mov instructions will only update the specific register bytes or memory locations indicated by the destination operand:
+
+                - the exception is for movl, which sets the first 32 bits of the register to zero
+
+            • Below is an example of 5 possible combinations of mov instructions:
+
+                - movl $0x4050, %eax        Immediate → Register   (4 bytes)
+                - movw %bp, %sp             Register → Register    (2 bytes)
+                - movb (%rdi,%rcx), %al     Memory   → Register    (1 byte)
+                - movb $-17, (%esp)         Immediate → Memory     (1 byte)
+                - movq %rax, -12(%rbp)      Register → Memory      (8 bytes)
+
+            • The following two classes of data movement instructions are for copying a smaller source value to a larger destination:
+
+                - instructions in the MOVZ class fill out the remaining bytes of the destination with zeros
+
+                - instructions in the MOVS class fill out the remaining bytes with sign extension
+
+                    -- suffixes for both classes are as follows:
+
+                       bw (byte to word)
+                       bl (byte to double word)
+                       wl (word to double word)
+                       bq (byte to quadword)
+                       movzwq (word to quad word)
+
+                    -- note that the movzlq command doesn't exist, but can be implemented using a movl instruction having a register as the destination. 
+                    
+                    -- this technique takes advantage of the property that an instruction generating a 4-byte value with a register as the destination 
+                       will fill the upper 4 bytes with zeros.
+
+                    -- cltq is a special instruction that takes no operands and has the same effect as  movslq %eax, %rax
+
+        C. Data Movement Example
+
+            * Lines 9 - 10 in 'move.s' show an example of the movq command in real code:
+
+                - the value of *xp is stored in the %rdi register (first argument)
+                - the value of y is stored in the %rsi register (second argument)
+                - the value of x is stored in the %rax register (return value)
+
+                - movq (%rdi), %rax     (gets the value stored at the memory address in %rdi (*xp) and writes x with this return value in %rax)
+                - movq %rsi, (%rdi)     (get the value of y from %rsi and store it at the memory location pointed to by %rdi (*xp))
+
+            • The key takeaway from the code snippet is that when we dereference a pointer in C, we copy the pointer (the address) into a register 
+              and then access the memory at that address using the same register:
+
+                - movq (%rdi), %rax     (gets the value stored at the memory address in %rdi (*xp) and stores it in %rax)
+
+        D. Pushing and Popping Stack Data
+
+            • The final two data movement operations are used to push data onto and pop data from the program stack.
+
+            • In x86-64, stacks grow downward: higher memory addresses are at the “bottom” and lower addresses are at the “top.”
+
+                - recall that %rsp is the stack pointer — it always points to the current top of the stack.
+
+            • Pushing a quad word value onto the stack involves first decrementing the stack pointer by 8 and then writing the value at the new top-of-stack address.
+
+                - pushing a quad word decrements %rsp by 8 and stores the value at the new top-of-stack address:
+
+                    --  pushq %rbp is equivalent to:
+                        
+                        subq $8, %rsp
+                        movq %rbp, (%rsp)
+
+                        * the pushq instruction is encoded in the machine code as a single byte, whereas the pair of instructions shown above requires a total of 8 bytes
+
+            • Popping a quad word involves reading from the top of the stack and then incrementing the stack pointer by 8.
+
+                - popq %rax is equivalent to:
+                
+                  movq (%rsp), %rax
+                  addq $8, %rsp
+
+            • Programs can access any position in the stack using normal memory addressing: 
+
+                - movq 8(%rsp), %rdx    (reads the second quad word from the stack into %rdx)
+
+
+    V. Arithmetic and Logical Operations
+
+        • Aside from the MOV class, there are several other classes of arithmetic operations:
+
+            - ADD(S, D)     
+            - SUB(S, D)
+            - IMUL(S, D)
+            - XOR(S, D)
+            - OR(S, D)
+            - AND(S, D)
+            - NOT(S)        *bitwise negation of each bit
+            - NEG(S)        *Computes the two’s complement of the operand.
+            - SAL(k, D)     *left shift by k, same as SHL(k, D)
+            - SAR(k, D)     *artihmetic right shift by k
+            - SHR(k, D)     *logical right shfit by key
+
+        • Each of the above operations has instructions for operating on the four sizes of data (b, w, l, q).
+
+        A. Load Effective Address
+
+            • The load effective address address instruction (leaq) is a vairant of the movq instruction
+
+                - leaq has the form of an instruction that reads from memory to a register, but it does not reference memory at all
+
+                    -- its first operand apprears to be a memory reference, but instead of reading from the designated location, the instruction copies the effective address to the desination.
+
+                    *  the register doesn’t get the value stored at that memory address, but rather the computed address itself.
+
+            • For the reason described above, leaq can be used to compactly describe common arithmetic operations:
+
+                - conceptually, both operations do the same 4 calculations
+
+                    (1) movq %rbx, %rax
+                    (2) imulq $4, %rdx, %rdx
+                    (3) addq %rdx, %rax
+                    (4) addq $7, %rax
+
+                - movq  7(%rdx,%rdx,4), %rax has two additional steps after the four operations:
+
+                    "compute the effective address (steps 1 - 4) → go to memory at that address → fetch the value (memory dereference) → put them into %rax"
+
+                - leaq 7(%rdx,%rdx,4), %rax is only one instruction:
+
+                    "compute the effective address (steps 1 - 4) → drop that number directly into %rax"
+
+            * See lines 9 - 11 in leaq.s for an example of the leaq instructions performed by the funciton in leaq.c
+
+        B. Unary and Binary Operations
+
+            • Unary operations only have a single operand serving as both the source and destination
+
+            • Binary operations have the operand order of (S, D)
+
+                - subq(%rax, %rdx) is read as "subtract the value of %rax from %rdx
+
+        C. Shift Operations
+
+            • The final group consists of shift operations, where the shift amount is given first and the value to shift is given second (k, D).
+
+            • The different shift instructions can specify the shift amount either as an immediate value or with the single-byte register %cl:
+
+                - With x86-64, data values that are w bits are shifted by the low-order m bits of register %cl, where m = log₂(w)
+                  
+                    -- for example, if %cl = 0xAB and the width of %ax = 16, the operation salw(%cl, %ax):
+
+                       leftshifts %rax by the first 4 bits (log₂(16) = 4) of %cl, and since the first 4 bits of %cl are 1011, 
+                       %ax would be left shifted by 11 bits. 
+
+                    -- because only the low 4 bits of %cl were used, the higher order bits of %cl were ignored
+
+        D. Discussion
+
+            • Compilers often store multiple program values in registers and move values between registers to compute results.
+
+            • One can clear a register by XOR'ing the contents of a register with itself (xorq %rax, %rax)
+
+                - this saves us from having to store an immediate (0) in memory
+
+        E. Special Arithmetic Operations
+
+            • Sometimes we need to multiply two 64-bit numbers and get the full 128-bit result, because a 64-bit number multiplied by another 64-bit number can be as big as 128 bits.
+
+                - to handle this, x86-64 treats %rdx:%rax as a single 128-bit “oct word”, where:
+
+                    -- %rax stores the low 64 bits of the product
+
+                    -- %rdx stores the high 64 bits of the product
+
+                - imulq can work in two forms:
+
+                    -- two-operand form: multiply two 64-bit numbers → truncate result to 64 bits
+
+                    -- one-operand form (full 128-bit multiply): %rax contains the first operand, and the instruction source is the second operand
+
+                    -- result goes into %rdx:%rax (high64:low64 128 bits)
+
+                - mulq is similar but unsigned multiplication
+
+                - idivq (signed) and divq (unsigned) work the same way as imulq and mulq but for division:
+
+                    -- the quotient is stored in register %rax and the remainder in register %rdx.
+
+                - cqto (-o for oct word) is used for division; it sign-extends %rax into %rdx:%rax so you can divide a full 128-bit value.
+
+
+
+
+
+                 
+                         
+
+
+
+
+        
+
+            
+
+            
+            
+
+            
+
