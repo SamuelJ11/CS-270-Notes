@@ -1,6 +1,6 @@
 CHAPTER 4: PROCESSOR ARCHITECTURE
 
-    • The instructions supported by a particular processor and thier byte-level encodings are known as its instruction set architecture (ISA)
+     •The instructions supported by a particular processor and thier byte-level encodings are known as its instruction set architecture (ISA)
 
         - The ISA provides a conceptual layer of abstraction between compiler writers and processor designers
 
@@ -235,7 +235,5 @@ CHAPTER 4: PROCESSOR ARCHITECTURE
                   (2) push the decremented value of %rsp
  
                 * the same is true for popq %rsp
-
-    II. Logic Design and the Hardware Control Language HCL
 
             
