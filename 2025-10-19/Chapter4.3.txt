@@ -192,5 +192,49 @@ CHAPTER 4: PROCESSOR ARCHITECTURE
 
         B. SEQ Hardware Structure
 
-            • 
+            • See figure 4.22 on page 425 for a crude high-level overview of the general process described in section A.
+
+            • Figure 4.23 is a bit complicated so here is a verbose and thorough walkthrough:
+            
+                (1) fetch Stage:
+                  - the stage begins by reading the current instruction address from the PC (Program Counter)
+                  - the PC value is fed to the instruction memory to retrieve the instruction byte, which is parsed to yield the instruction code (icode) 
+                    and function code (ifun)
+                  - the register operands (rA,rB) and the optional 8-byte constant or displacement (valC) are extracted
+                  - the PC increment unit calculates valP (PC + length of instruction), which is the address of the next sequential instruction
+                  - all these components are passed forward to the decode stage
+
+                2. Decode Stage 
+                  - the stage reads up to two operands from the register file
+                  - the rA and rB register IDs from the fetch stage select the output ports of the register file
+                  - the contents of the selected registers are read out as valA and valB
+                  - control logic blocks (srcA, srcB, dstE, dstM) determine which registers are needed for reading and which will be destinations for writing back
+                    
+                3. Execute Stage                 
+                  - the ALU A and ALU B inputs are selected by control logic from valA, valB, and valC
+                  - the ALU fun. control block dictates the arithmetic or logical operation (e.g. addq vs. address calculation) based on the instruction's icode and ifun bits
+                  - the output of the ALU is valE (the execution result or memory address)
+                  - for instructions like OPq, the condition codes (CC) are set, and the Cnd logic block determines if a conditional jump (jXX) should be taken
+
+                4. Memory Stage                 
+                  - the data memory performs either a read or a write operation
+                  - the memory address is typically valE (from the ALU)
+                  - for a store operation (rmmovq), the data to be written comes from valA
+                  - for a load operation (mrmovq), the data read from memory is output as valM
+                  - the Mem. control block provides the read and write signals to the data memory
+
+                5. Write Back Stage                 
+                  - the register file has two write ports to handle two potential results:
+                    -- the valE result is written to the register specified by the dstE control signal
+                    -- the valM result (read from memory) is written to the register specified by the dstM control signal
+
+                6. PC Update                
+                  - the New PC control block selects the final address (newPC) from three possible sources:
+                    (1) valP (the sequential address, for nop, pushq, popq, OPq, etc.)
+                  	(2) valC (the jump target or the address for a call destination)
+                  	(3) valM (the return address for ret)
+                  - this selected newPC is then fed back to the PC register, where it is loaded on the next clock edge, completing the cycle and starting the fetch stage for the next instruction
+
+        C. SEQ Timing
+
 
