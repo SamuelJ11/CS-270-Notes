@@ -1,0 +1,196 @@
+CHAPTER 4: PROCESSOR ARCHITECTURE
+
+    III. Sequential Y86-64 Implementations
+
+        • For the following discussion we will describe a processor called SEQ (sequential processor) which performs all the steps required to
+          process one complete instruction per clock cycle
+
+        A. Organizing Processing into Stages
+
+            • Processing an instruction requires a number of operations:
+
+                (1) Fetch: 
+                    - reads the bytes of an instruction from memory, using the program counter (PC) as the memory address.
+                    - from the instruction it extracts the two 4-bit portions (icode and ifun) of the instruction specifier byte, and possibly a 
+                      register specifier byte and/or 8-byte constant word (valC).
+                    - computes the address of the instruction (valP) following the current one in sequential order, giving
+                      valP = %rip + sizeof(fetched instruction)
+
+                (2) Decode:
+                    - the decode stage figures out what data the instruction will operate on
+                    - reads up to two operands (register values) from the register file giving values 'valA' and 'valB'
+
+                (3) Execute:
+                    - in this stage, the arithmetic logic unit (ALU) either (1) performs an operation specified by the instruction, (2) computes an 
+                      effective address, or (3) increments or decrements the stack pointer.
+                    - condition codes are possibly set
+                    - the resulting value for the above computation is stored in 'valE'
+
+                (4) Memory:
+                    - read or write data to/from memory, with the value read being reffered to as 'valM'
+                
+                (5) Write back:
+                    - writes up to two results to the register file
+
+                (6) PC update:
+                    - PC is set to the address of the next instruction
+
+            • Using a simple and uniform structure is important when designing hardware, and having different instructions share as much hardware as 
+              possible helps to greatly minimize complexity
+
+            • Referencing figure 4.2 on page 385, we see that an integer operation OPq (addq, subq, andq, xorq) all have the same value of icode.
+
+                - starting with the integer operations, we see that the fetch instruction simply requires two bytes (1 instruction specifier bytes and
+                  1 register specifier byte), therefore valP is calculated as PC + 2
+
+                - during the decode stage, the two operands (register values) are read
+                
+                - during the execute stage, the operands and the function specifier (ifun) are supplied to the ALU to return valE.  the instruction is modeled 
+                  as valB OP valA (note the order of arguments which is consistent with the conventions of Y/x86-64)
+
+                - nothing happens in the memory stage
+
+                - ValE is written back to register rB in the write-back stage
+
+                - PC is set to valP
+
+            • Reference the figure below from page 415 to understand the other two instructions:   
+
+                +-----------+--------------------------------+--------------------------+------------------------------+
+                | Stage     | OPq rA, rB                     | rrmovq rA, rB            | irmovq V, rB                 |
+                +===========+================================+==========================+==============================+
+                | Fetch     | icode:ifun <- M₁[PC]           | icode:ifun <- M₁[PC]     | icode:ifun <- M₁[PC]         |
+                |           | rA:rB <- M₁[PC+1]              | rA:rB <- M₁[PC+1]        | rA:rB <- M₁[PC+1]            |
+                |           | valP <- PC + 2                 | valP <- PC + 2           | valC <- M₈[PC+2]             |
+                |           |                                |                          | valP <- PC + 10              |
+                +-----------+--------------------------------+--------------------------+------------------------------+
+                | Decode    | valA <- R[rA]                  | valA <- R[rA]            |                              |
+                |           | valB <- R[rB]                  |                          |                              |
+                +-----------+--------------------------------+--------------------------+------------------------------+
+                | Execute   | valE <- valB OP valA           | valE <- 0 + valA         | valE <- 0 + valC             |
+                |           | Set CC                         |                          |                              |
+                +-----------+--------------------------------+--------------------------+------------------------------+
+                | Memory    |                                |                          |                              |
+                +-----------+--------------------------------+--------------------------+------------------------------+
+                | Write back| R[rB] <- valE                  | R[rB] <- valE            | R[rB] <- valE                |
+                +-----------+--------------------------------+--------------------------+------------------------------+
+                | PC update | PC <- valP                     | PC <- valP               | PC <- valP                   |
+                +-----------+--------------------------------+--------------------------+------------------------------+
+
+                - for the rrmovq instruction, since e do not need to fetch the second register operand we simplly set the second ALU input to zero
+
+                - for the irmovq, we need to fetch an 8-byte constant word as well as the 2 bytes for the instruction and register specifiers, causing
+                  valP to have a value of PC + 10
+
+                    -- this makes sense if you reference figure 4.2 on page 385 again, where it is noted that ID value 0xF is used in the instruction encodings 
+                       when we need to indicate that no register should be accessed - here rB is that 0xF value
+
+            • Memory instructions like rmmovq and mrmovq can be understood by referencing the table below
+
+                +-----------+-----------------------------+-----------------------------+
+                | Stage     | rmmovq rA, D(rB)            | mrmovq D(rB), rA            |
+                +===========+=============================+=============================+
+                | Fetch     | icode:ifun <- M₁[PC]        | icode:ifun <- M₁[PC]        |
+                |           | rA:rB <- M₁[PC+1]           | rA:rB <- M₁[PC+1]           |
+                |           | valC <- M₈[PC+2]            | valC <- M₈[PC+2]            |
+                |           | valP <- PC + 10             | valP <- PC + 10             |
+                +-----------+-----------------------------+-----------------------------+
+                | Decode    | valA <- R[rA]               |                             |
+                |           | valB <- R[rB]               | valB <- R[rB]               |
+                +-----------+-----------------------------+-----------------------------+
+                | Execute   | valE <- valB + valC         | valE <- valB + valC         |
+                +-----------+-----------------------------+-----------------------------+
+                | Memory    | M₈[valE] <- valA            | valM <- M₈[valE]            |
+                +-----------+-----------------------------+-----------------------------+
+                | Write back|                             | R[rA] <- valM               |
+                +-----------+-----------------------------+-----------------------------+
+                | PC update | PC <- valP                  | PC <- valP                  |
+                +-----------+-----------------------------+-----------------------------+
+
+                - both rmmovq and mrmovq use displacement addressing, which means the memory address they refer to isn’t just a plain register — it’s an offset from a base register
+
+                    -- this offset is given by 'D', and that D (the displacement) is encoded in the instruction as an 8-byte constant (valC)
+
+                - the memory instructions use the ALU to add valC to valB, giving the effective address (the sum of the displacement and the base register value) for the memory operation.
+
+            • Next we have the 'pushq' and 'popq' instructions:
+            
+                +-----------+-----------------------------+-----------------------------+
+                | Stage     | pushq rA                    | popq rA                     |
+                +===========+=============================+=============================+
+                | Fetch     | icode:ifun <- M₁[PC]        | icode:ifun <- M₁[PC]        |
+                |           | rA:rB <- M₁[PC+1]           | rA:rB <- M₁[PC+1]           |
+                |           |                             |                             |
+                |           | valP <- PC + 2              | valP <- PC + 2              |
+                +-----------+-----------------------------+-----------------------------+
+                | Decode    | valA <- R[rA]               | valA <- R[%rsp]             |
+                |           | valB <- R[%rsp]             | valB <- R[%rsp]             |
+                +-----------+-----------------------------+-----------------------------+
+                | Execute   | valE <- valB + (-8)         | valE <- valB + 8            |
+                +-----------+-----------------------------+-----------------------------+
+                | Memory    | M₈[valE] <- valA            | valM <- M₈[valA]            |
+                +-----------+-----------------------------+-----------------------------+
+                | Write back| R[%rsp] <- valE             | R[%rsp] <- valE             |
+                |           |                             | R[rA] <- valM               |
+                +-----------+-----------------------------+-----------------------------+
+                | PC update | PC <- valP                  | PC <- valP                  |
+                +-----------+-----------------------------+-----------------------------+
+
+                - note that rB is a 'dummy' register referring to the 0xF value on page 385
+
+                - In the execute stage, we use the ALU to decrement the stack pointer by 8, and this value is used for the memory write
+                  address and is stored back to %rsp in the write-back stage.
+
+                - In the memory stage, %rsp still holds its old value (it has not been decremented yet), this occurs in the write back stage
+
+                - for the 'popq' instruction, we read two copies of the stack pointer in the decode stage:
+
+                    -- this is clearly redundant but it matches the pattern used by other instructions, so the hardware design is more uniform:
+                      
+                      (1) allows the ALU to increment the stack pointer by 8 in the execute stage and 
+                      
+                      (2) use the unincremented value as the address for the memory operation
+
+                - by using valA for memory read and valE for updating %rsp, we respect the convention of Y/x86-64 (read first, pop later) even though internally the ALU 
+                  computes valE first in the execute stage
+            
+            • Finally we have the jump, call and return instructions:
+         
+                +-----------+-----------------------------+-----------------------------+-----------------------------+
+                | Stage     | jXX Dest                    | call Dest                   | ret                         |
+                +===========+=============================+=============================+=============================+
+                | Fetch     | icode:ifun <- M₁[PC]        | icode:ifun <- M₁[PC]        | icode:ifun <- M₁[PC]        |
+                |           | valC <- M₈[PC + 1]          | valC <- M₈[PC + 1]          |                             |
+                |           | valP <- PC + 9              | valP <- PC + 9              | valP <- PC + 1              |
+                +-----------+-----------------------------+-----------------------------+-----------------------------+
+                | Decode    |                             |                             | valA <- R[%rsp]             |
+                |           |                             | valB <- R[%rsp]             | valB <- R[%rsp]             |
+                +-----------+-----------------------------+-----------------------------+-----------------------------+
+                | Execute   | Cnd <- Cond(CC, ifun)       | valE <- valB + (-8)         | valE <- valB + 8            |
+                +-----------+-----------------------------+-----------------------------+-----------------------------+
+                | Memory    |                             | M₈[valE] <- valP            | valM <- M₈[valA]            |
+                +-----------+-----------------------------+-----------------------------+-----------------------------+
+                | Write back|                             | R[%rsp] <- valE             | R[%rsp] <- valE             |
+                +-----------+-----------------------------+-----------------------------+-----------------------------+
+                | PC update | PC <- Cnd ? valC : valP     | PC <- valC                  | PC <- valM                  |
+                +-----------+-----------------------------+-----------------------------+-----------------------------+
+
+                - note that none of the above instructions require a register specifier byte
+
+                - in the execute stage of the jump instruction, we check the condition codes (CC) and the jump condition (ifun) to determine whether or not 
+                  to take the branch, yielding a 1-bit signal Cnd
+
+                - in the PC update stage, we test this flag and set the PC to valC (the jump target) if the flag is 1 and to valP (the address of the following instruction) 
+                  if the flag is 0
+
+                - Instructions 'call' and 'ret' bear some similarity to instructions 'pushq' and 'popq':
+
+                    -- with instruction 'call', we push 'valP' (address of the instruction that follows the call instruction) during the memory stage
+                       and during the PC update stage we set the PC to call destination (valC)
+                       
+                    -- with instruction 'ret', we assign 'valM' (value popped from the stack) to the PC in the PC update stage
+
+        B. SEQ Hardware Structure
+
+            • 
+

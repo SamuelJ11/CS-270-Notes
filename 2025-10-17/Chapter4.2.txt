@@ -87,7 +87,7 @@ CHAPTER 4: PROCESSOR ARCHITECTURE
 
                 - when dstW is set to the special ID value 0xF, no program register is written.
 
-            • Lets see what happensiIf the CPU tries to read and write data from/to the same register simultaneously:
+            • Lets see what happens if the CPU tries to read and write data from/to the same register simultaneously:
 
                 - assume that the current state for register 1 (%rcx) is a shown below:
 
