@@ -357,6 +357,29 @@ CHAPTER 4: PROCESSOR ARCHITECTURE
 
             • Execute
 
+                - the ALU computation in this stage takes 2 operands, ALU A and ALU B
+
+                    -- the value of aluA can be valA, valC, or either −8 or +8, depending on the instruction type:
+
+                        word aluA = [                        
+                        icode in { IOPQ, IRRMOVQ }: valA;               
+                        icode in { IIRMOVQ, IRMMOVQ, IMRMOVQ } : valC;                    
+                        icode in { ICALL, IPUSHQ }   : -8;
+                        icode in { IRET, IPOPQ }     : 8;                      
+                        ];
+
+                - for the OPq instructions, we want the ALU to use the operation encoded in the ifun field of the instruction:
+
+                    word alufun = [
+                    icode == IOPQ : ifun;
+                    1 : ALUADD;
+                    ];
+
+                - the ALU also generates the three signals on which the condition codes are based—zero, sign, and
+                  overflow—every time it operates, but we only want to set the condition codes when an OPq instruction is executed:
+
+                    book set_cc = icode in { IOPQ };
+
 
 
                     
