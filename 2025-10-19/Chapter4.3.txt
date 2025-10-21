@@ -320,17 +320,16 @@ CHAPTER 4: PROCESSOR ARCHITECTURE
                   +--------------------------+-----------------------------+-----------------------------+------------------------------------------------------------+
                   | icode Category           | srcA (Register ID for valA) | srcB (Register ID for valB) | Rationale                                                  |
                   +--------------------------+-----------------------------+---------------------------+--------------------------------------------------------------+
-                  | Arithmetic/Move          | Selects rA                  | Selects rB                  | Reads both source operands for the ALU.                    |
-                  | Memory Access            | Selects rA (data)           | Selects rB (base address)   | rB gives the base address, rA gives or receives data.      |
-                  | Stack Operations         | Selects rA or %rsp          | Selects %rsp                | %rsp is the base address/data; rA holds the value to push. |
-                  | Immediate Move           | Selects RNONE (0xF)         | Selects RNONE               | Neither valA nor valB is needed; data comes from valC.     |
+                  | rrmovq, OPq              | Selects rA                  | Selects rB                  | Reads both source operands for the ALU.                    |
+                  | rmmovq                   | Selects rA (data)           | Selects rB (base address)   | rB gives the base address, rA gives or receives data.      |
+                  | pushq                    | Selects rA                  | Selects %rsp                | %rsp is the base address/data; rA holds the value to push. |
                   +--------------------------+-----------------------------+-----------------------------+------------------------------------------------------------+
 
                 - the register file performs two simultaneous reads based on the addresses provided by the srcA and srcB logic blocks:
 
-                  -- the Register File reads the registers specified by srcA and srcB and outputs the thier 64-bit values through thier corresponding ports (A and B)
+                  -- the register file reads the registers specified by srcA and srcB and outputs their 64-bit values through their corresponding ports (A and B)
                
-                - The Register File performs two simultaneous writes using the destination IDs determined earlier by the control logic:
+                - the register file performs two simultaneous writes using the destination IDs determined earlier by the control logic:
 
                   -- the value valE is written to the register specified by dstE
 
@@ -340,7 +339,7 @@ CHAPTER 4: PROCESSOR ARCHITECTURE
                     | OPq rA, rB                | The result of the arithmetic  | rB                        |
                     |                           | operation valB OP valA        |                           |
                     | i/rrmovq rA, rB           | The moved value 0 + valC/A    | rB                        |
-                    | Stack Update, Call/Ret    | The new stack pointer address | %rsp                      |
+                    | stack Update, call/ret    | The new stack pointer address | %rsp                      |
                     +---------------------------+-------------------------------+---------------------------+
 
                   -- recall that rB is the destination field for valE (specified by dstE) unless the instruction requires the stack pointer (%rsp) to be updated
@@ -351,10 +350,10 @@ CHAPTER 4: PROCESSOR ARCHITECTURE
                     | Instruction      | What valM Represents                             | Destination Register      |
                     +------------------+--------------------------------------------------+---------------------------+
                     | mrmovq D(rB), rA | The data read from the memory location M₈[valE]  | rA                        |
-                    | popq rA          | The data read from the stack M₈[valA]            | rA                        |
+                    | popq rA          | The data read from the stack top M₈[valA]        | rA                        |
                     +------------------+--------------------------------------------------+---------------------------+
 
-                  -- recall that rA is the destination field for valM (all instructions that load data from the instruction memory)
+                  -- recall that rA is the destination field for valM (all instructions that load data from the data memory)
 
             • Execute
 
