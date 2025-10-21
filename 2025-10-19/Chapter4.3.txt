@@ -380,6 +380,39 @@ CHAPTER 4: PROCESSOR ARCHITECTURE
 
                     book set_cc = icode in { IOPQ };
 
+                - now we can implement the COND bit flag:
+
+                int cond(unsigned char ccs, unsigned char ifun)
+                {
+                    int OF = (ccs >> 1) & 1;
+                    int ZF = (ccs >> 2) & 1;
+                    int SF = (ccs >> 3) & 1;
+                    
+                    switch (ifun)
+                    {
+                        case 0:
+                            return 1;
+                        
+                        case 1:
+                            return (SF ^ OF) | ZF;
+                            
+                        case 2:
+                            return SF ^ OF;
+                            
+                        case 3:
+                            return ZF;
+                            
+                        case 4:
+                            return !ZF;
+                            
+                        case 5:
+                            return !(SF ^ OF);
+                            
+                        case 6:
+                            return !(SF ^ OF) && !ZF;                            
+                    }
+                }
+
 
 
                     
