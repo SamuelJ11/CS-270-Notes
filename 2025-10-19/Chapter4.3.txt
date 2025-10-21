@@ -77,7 +77,7 @@ CHAPTER 4: PROCESSOR ARCHITECTURE
                 | PC update | PC <- valP                     | PC <- valP               | PC <- valP                   |
                 +-----------+--------------------------------+--------------------------+------------------------------+
 
-                - for the rrmovq instruction, since e do not need to fetch the second register operand we simplly set the second ALU input to zero
+                - for the rrmovq instruction, since we do not need to fetch the second register operand we simply set the second ALU input to zero
 
                 - for the irmovq, we need to fetch an 8-byte constant word as well as the 2 bytes for the instruction and register specifiers, causing
                   valP to have a value of PC + 10
@@ -236,5 +236,132 @@ CHAPTER 4: PROCESSOR ARCHITECTURE
                 - this selected newPC is then fed back to the PC register, where it is loaded on the next clock edge, completing the cycle and starting the fetch stage for the next instruction
 
         C. SEQ Timing
+
+            • This section is very dense so I'm going to summarize the important points that allow for a general understanding of the text without getting too entrenched in the details.
+
+            • Understanding the figures 4.23 and 4.26 - 4.31 absolutely REQUIRES that you know these facts outlined under this bullet point:
+
+              - The Flexible Role of rA (The Data-Mover)
+                  -- the rA field's primary function is to handle the data value itself, and moves data between the register file and memory
+                  -- as a source (srcA): rA contains the register ID holding the value needed before the memory stage, which includes:
+                    •	The second operand for ALU operations (OPq)
+                    •	The value to be stored into memory (rmmovq and pushq)
+                  -- as a destination (dstM): rA contains the register ID that will receive the value read from memory (load operations mrmovq and popq)
+            
+              - The Anchored Role of rB (The Address/Destination Anchor)
+                  -- The rB field's primary function is to act as an anchor for calculation or destination, making it central to valE (the ALU result)
+                  -- As an address anchor (valB): rB holds the base address for all memory access instructions (rmmovq and mrmovq), and its value is crucial for calculating 
+                     the effective address valE (valB + valC)
+                  -- as an ALU destination (dstE): rB is the consistent destination for the result of any register-to-register operation, including ALU operations (OPq) and 
+                     register-to-register moves (rrmovq)
+
+              - This division of labor allows the control logic to handle all instructions uniformly: rB handles the address or the ALU destination, while rA handles 
+                the moving data between registers and memory          
+
+              - Understanding icode and ifun
+
+                  -- the icode field is 4 bits wide, which means it can represent 16 unique values. the Y86-64 instruction set, however, only defines 12 distinct instructions, 
+                     using 12 of the 16 possible codes shown on page 432:
+                  
+                      IHALT    0
+                      INOP     1
+                      IRRMOVQ  2
+                      IIRMOVQ  3
+                      IRMMOVQ  4
+                      IMRMOVQ  5
+                      IOPL     6
+                      IJXX     7
+                      ICALL    8
+                      IRET     9
+                      IPUSHQ   A
+                      IPOPQ    B
+              
+                  -- in the hardware flow diagrams, the lines from icode are not single wires, but a 4-bit bus carrying the instruction code to multiple logic blocks
+
+                  -- these blocks (Need valC, Need regids, Instr valid) are combinational logic circuits, and each one takes the entire 4-bit icode as input and 
+                     outputs a single boolean control signal
+
+                  -- each logic block computes a boolean value based on the instruction type encoded in icode. for example:
+
+                      need_regids = true if icode is in { IRRMOVQ, IOPQ, IPUSHQ, IPOPQ, IIRMOVQ, IRMMOVQ, IMRMOVQ }                    
+
+                      need_valC = true if icode is in { IIRMOVQ, IRMMOVQ, IMRMOVQ, IJXX, ICALL }                    
+
+                      instr_valid = true if icode is one of the twelve legal Y86-64 instruction codes
+
+                  -- ifun (Instruction Function): this 4-bit value refines the operation for instruction groups (like selecting ADD vs SUB for OPq), 
+                     but it plays no role in calculating instruction length.
+                  
+            • Fetch
+
+                - the instruction memory unit in the this stage of the SEQ processor reads 10 bytes starting at the PC address every cycle, 
+                  regardless of the instruction type: 
+
+                  -- it must handle the longest possible instruction, which is 10 bytes 
+                  -- reading a fixed, maximum-length block simplifies the hardware by avoiding complex control logic for variable-length instructions
+
+                - the split unit immediately extracts the icode and ifun fields from the first byte (instruction specifier byte)
+
+                - the icode then drives the logic to compute three critical control signals (instr_valid, need_regids, and need_valC)
+
+                - the processor then uses the icode and the align unit to select and extract only the relevant fields from those 10 bytes
+
+                  -- the align unit outputs the register specifier byte broken into two 4-bit register specifiers (rA and rB)
+
+                - unused bytes (such as bytes 2–9 for a 2-byte OPq instruction) are simply set to zero
+
+            • Decode and Write-Back
+
+                - ICODE's Role in Controlling Register Ports
+
+                  -- The 4-bit icode signal serves as the input to four control logic blocks (srcA, srcB, dstE, and dstM)
+                  -- the rA and rB signals are also inputs to these blocks, and each block determines which register ID is selected as the output
+
+                  +--------------------------+-----------------------------+-----------------------------+------------------------------------------------------------+
+                  | icode Category           | srcA (Register ID for valA) | srcB (Register ID for valB) | Rationale                                                  |
+                  +--------------------------+-----------------------------+---------------------------+--------------------------------------------------------------+
+                  | Arithmetic/Move          | Selects rA                  | Selects rB                  | Reads both source operands for the ALU.                    |
+                  | Memory Access            | Selects rA (data)           | Selects rB (base address)   | rB gives the base address, rA gives or receives data.      |
+                  | Stack Operations         | Selects rA or %rsp          | Selects %rsp                | %rsp is the base address/data; rA holds the value to push. |
+                  | Immediate Move           | Selects RNONE (0xF)         | Selects RNONE               | Neither valA nor valB is needed; data comes from valC.     |
+                  +--------------------------+-----------------------------+-----------------------------+------------------------------------------------------------+
+
+                - the register file performs two simultaneous reads based on the addresses provided by the srcA and srcB logic blocks:
+
+                  -- the Register File reads the registers specified by srcA and srcB and outputs the thier 64-bit values through thier corresponding ports (A and B)
+               
+                - The Register File performs two simultaneous writes using the destination IDs determined earlier by the control logic:
+
+                  -- the value valE is written to the register specified by dstE
+
+                    +---------------------------+-------------------------------+---------------------------+
+                    | Instruction               | What valE Represents          | Destination Register      |
+                    +---------------------------+-------------------------------+---------------------------+
+                    | OPq rA, rB                | The result of the arithmetic  | rB                        |
+                    |                           | operation valB OP valA        |                           |
+                    | i/rrmovq rA, rB           | The moved value 0 + valC/A    | rB                        |
+                    | Stack Update, Call/Ret    | The new stack pointer address | %rsp                      |
+                    +---------------------------+-------------------------------+---------------------------+
+
+                  -- recall that rB is the destination field for valE (specified by dstE) unless the instruction requires the stack pointer (%rsp) to be updated
+                             
+                  -- the value valM is written to the register specified by dstM                
+
+                    +------------------+--------------------------------------------------+---------------------------+
+                    | Instruction      | What valM Represents                             | Destination Register      |
+                    +------------------+--------------------------------------------------+---------------------------+
+                    | mrmovq D(rB), rA | The data read from the memory location M₈[valE]  | rA                        |
+                    | popq rA          | The data read from the stack M₈[valA]            | rA                        |
+                    +------------------+--------------------------------------------------+---------------------------+
+
+                  -- recall that rA is the destination field for valM (all instructions that load data from the instruction memory)
+
+            • Execute
+
+
+
+                    
+
+
 
 
