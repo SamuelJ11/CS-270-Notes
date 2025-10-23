@@ -331,7 +331,7 @@ CHAPTER 4: PROCESSOR ARCHITECTURE
                
                 - the register file performs two simultaneous writes using the destination IDs determined earlier by the control logic:
 
-                  -- the value valE is written to the register specified by dstE
+                  -- the value valE is written to the register specified by dstE (execute stage)
 
                     +---------------------------+-------------------------------+---------------------------+
                     | Instruction               | What valE Represents          | Destination Register      |
@@ -344,7 +344,7 @@ CHAPTER 4: PROCESSOR ARCHITECTURE
 
                   -- recall that rB is the destination field for valE (specified by dstE) unless the instruction requires the stack pointer (%rsp) to be updated
                              
-                  -- the value valM is written to the register specified by dstM                
+                  -- the value valM is written to the register specified by dstM (memory stage)               
 
                     +------------------+--------------------------------------------------+---------------------------+
                     | Instruction      | What valM Represents                             | Destination Register      |
