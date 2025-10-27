@@ -457,6 +457,22 @@ CHAPTER 4: PROCESSOR ARCHITECTURE
 
               • PC Update 
 
+                - the final stage in SEQ generates the new value of the program counter, which will be either valP, valC or valM:
+
+                    word new_pc = [                    
+                    icode == ICALL : valC;        (1)               
+                    icode == IJXX && Cnd : valC;  (2)                      
+                    icode == IRET : valM;         (3)                   
+                    1 : valP;                     (4)
+                    ]; 
+
+                    (1) a call instruction is an unconditional jump, and valC holds the destination address
+                    (2) If the instruction is a conditional jump AND the condition test is True, the jump is taken. valC holds the jump target address
+                    (3) A return instruction must jump to the return address. This address was read from the stack in the Memory stage and stored in valM
+                    (4) This is the normal, sequential flow. valP is the address of the instruction immediately following the current one, and covers
+                        nop, rrmovq, OPq, pushq, popq, and non-taken branches
+
+
 
 
                     
