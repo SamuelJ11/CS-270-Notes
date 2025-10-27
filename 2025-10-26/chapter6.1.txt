@@ -1,0 +1,178 @@
+CHAPTER 6:  THE MEMORY HEIRARCHY
+
+    • If you understand how data moves through the memory hierarchy, you can write your programs so that their data items are stored higher in the hierarchy, 
+      where the CPU can access them more quickly.
+
+      - this idea is based on a fundamental property of computer programs called locality
+      
+        -- programs with good locality tend to access the same data repeatedly or access data items that are located close to each other in memory
+
+    I Storage Technologies
+
+        A. Random Access Memory
+
+            •  Random access memory (RAM) comes in two varieties — static and dynamic
+
+                - SRAM is faster and much more expensive, used mainly for cache memory
+
+                - DRAM is slower but cheaper, used for main memory and graphics buffers
+
+                - most systems contain only a small amount of SRAM but much larger amounts of DRAM
+
+            • SRAM stores each bit in a bistable memory cell.
+
+                - imagine a pendulum that can fall left or right; if it’s all the way to the left (bit = 0) or right (bit = 1) it's stable
+
+                - if it's perfectly upright, its a metastable balance point (think neither 0 nor 1 yet)
+
+                - if you slightly disturb the pendulum when it’s balanced upright, it will quickly fall to one side — and then stay there:
+                    -- that’s just like the SRAM cell: if the voltage somehow gets disturbed and both sides are nearly equal, it’ll quickly “decide” 
+                       which stable configuration to fall into — 0 or 1
+
+            • DRAM stores each bit as charge on a capacitor. This capacitor is very small, typically around 30 femtofarads (30 × 10^-15) farads. 
+
+                - unlike SRAM, a DRAM memory cell is very sensitive to any disturbance
+                
+                - when the capacitor voltage is disturbed, it will never recover
+            
+            • Various sources of leakage current cause a DRAM cell to lose its charge within a time period of around 10 to 100 milliseconds
+
+                - since clock cycle times are measured in nano-seconds, this is actually quite a long time
+
+                - the memory system must periodically refresh every bit of memory by reading it out and then rewriting it
+
+            • The cells (bits) in a DRAM chip are partitioned into 'd' supercells, each consisting of 'w' DRAM cells
+
+                - A d × w DRAM stores a total of dw bits of information
+                
+                - each supercell (d) is organized as a rectangular array with r rows and c columns (rc = d), and has an address of the form (i, j), 
+                  where i denotes the row and j denotes the column
+
+            • See figure 6.3 on page 611 for a high-level overview of a 16 × 8 DRAM chip
+
+                -  d = 16 supercells, w = 8 bits per supercell, r = 4 rows, and c = 4 columns
+
+                - information flows in and out of the chip via 1-bit external connectors called pins:
+
+                    -- eight data pins transfer 1 byte of data
+
+                    -- two address pins carry row and column supercell addresses
+
+                -  Each DRAM chip is connected to the memory controller (via the pins above) which can transfer w bits at a time to and from each DRAM chip
+
+                - to read the contents of a supercell (i, j):
+                    
+                    -- first the memory controller sends the row address (i) to the DRAM, followed by the column address (j)
+
+                    -- second, the DRAM responds by sending the contents of supercell (i, j) back to the controller
+
+                - the row address is called the Row Access Strobe (RAS) request, and we use CAS (Column Access Strobe) request for the column address
+
+                    -- example: supercell (2, 1) is read by first having the memory controller (MC) copy the entire contents of row 2 into an internal row buffer,
+                                then the MC sends column address 1, to which the DRAM responds by copying the 8-bit supercell from the row buffer to the MC
+
+            • Each DRAM chip can only handle a small number of bits at once — for example, 8 bits (1 byte) per transfer, but the CPU works with much wider data paths of
+              64 bits (8 bytes) at a time.
+
+            • Since a single DRAM chip isn’t enough to feed the CPU efficiently, manufacturers group several DRAM chips together on a memory module (like a stick of RAM).
+
+                - those chips work in parallel, so their individual 8-bit data outputs combine into a 64-bit-wide bus
+
+            • See figure 6.5 on page 613 to see how DRAM cells are organized in parallel to output 64-bit words to main memory:
+
+                - each supercell stores 1 byte of main memory, and each 64-bit word at byte address 'A' in main memory is represented by the eight supercells
+                  whose corresponding supercell address is (i, j)
+
+                - to retrieve the word at memory address A, the memory controller converts A to a supercell address (i, j) and sends it to the memory module, 
+                  which then broadcasts i and j to each DRAM
+                  
+                - in response, each DRAM outputs the 8-bit contents of its (i, j) supercell
+
+                -  Circuitry in the module collects these outputs and forms them into a 64-bit word, which it returns to the memory controller
+
+            • When the CPU needs to read or write data at some address A, the memory controller has to figure out which memory module actually stores this address
+
+                - main memory is divided across several modules that hold a different range of addresses
+                
+                - the memory controller looks at address A and determines which module (k) it belongs to
+
+            • There are many kinds of DRAM memories, and various optimizations have been made to speed up thier DRAM cell access time:
+
+                - Fast page mode DRAM (FPM DRAM): speeds up memory access by taking advantage of multiple reads from the same row
+
+                    -- once a row is opened and copied into the row buffer, subsequent accesses to that same row only need CAS signals
+
+                - Extended data out DRAM (EDO DRAM): An enhanced form of FPM DRAM that allows the individual CAS signals to be spaced closer together in time
+
+                ** These older types of DRAM (like Fast Page Mode or Extended Data Out) are asynchronous, meaning they don't use a shared, continuous clock signal to time their operations
+
+                - Synchronous DRAM (SDRAM): uses the same external clock signal that is already driving the memory controller, therefore it can output the contents 
+                  of its supercells at a faster rate than its asynchronous counterparts
+
+                - Double Data-Rate Synchronous DRAM (DDR SDRAM):  an enhancement of SDRAM that doubles the speed of the DRAM by using both clock edges as control signals
+
+                    -- the generational upgrades (DDR2, DDR3, etc.) use a feature called the prefetch buffer (a small, high-speed staging area on the DRAM chip itself)
+                       to increase the effective bandwidth
+
+                - Video RAM (VRAM): designed specifically engineered to handle the continuous and simultaneous data demands of a display (frame buffer for a graphics system)
+
+            • DRAM and SRAM are volatile in the sense that they lose their information if the supply voltage is turned off.
+
+                - non-volatile memories are known as read-only memories (ROMs) for historical reasons, although some types can be written to and read from
+
+            • ROMs are distinguished by the number of times they can be reprogrammed (written to) and by the mechanism for reprogramming them:
+
+                - a programmable ROM (PROM) can be programmed exactly once, and include a sort of fuse with each memory cell that can be blown once by zapping
+                  it with a high current
+
+                - an erasable prgrammable ROM (EPROM) has a transparent quartz window that permits light to reach the storage cells
+
+                    -- ALL cells are cleared to zeroes (global erase) by shining ultraviolet light through the window
+                    -- a special device is used to write ones into the EPROM, and can be reprogrammed on the order of 1000 times
+                    -- electictally erasable PROMs (EEPROMs) can erase and rewrite individual bytes using opposite-polarity electrical signals, and
+                       the chip does not need to be removed from the circuit board
+
+                - flash memories are a type of nonvolatile memory, based on EEPROMs - used in SSD's, digital cameras, cell phones, etc.
+
+            • Programs stored in ROM devices are often referred to as 'firmware':
+
+                - when a computer system is powered up, it runs firmware stored in a ROM (ex: PC's BIOS)
+
+            • Data flows back and forth between the processor and the DRAM main memory over shared electrical conduits called 'buses'
+
+                - a read transaction transfers data from the main memory to the CPU
+
+                - a write transaction transfers data from the CPU to the main memory
+
+            • A bus is a collection of parallel wires that carry address, data and control signals
+
+            • See figure 6.6 on page 616 for the following description:
+
+                - the CPU chip contains the ALU, register file, and bus interfeace
+                
+                - the I/O bridge contains the memory controller, and the DRAM memory modules make up the main memory
+
+                - the system bus connects the CPU to the I/O bridge, and the memory bus connects the I/O bridge to main memory
+            
+            • Consider what happens when the CPU performs a load operation 'mov A, %rax':    
+
+                - step 1: Address Request (CPU → Memory)
+
+                    -- the CPU's bus interface places the memory address A onto the system bus
+                    -- the I/O Bridge (or Northbridge/Memory Controller Hub) relays the address from the system bus to the memory bus
+
+                - step 2: Data Retrieval (Memory → Memory Bus)
+
+                    -- the Main Memory (DRAM) senses the address on the memory bus.
+                    -- it fetches the requested data word (the contents of address A) and places this data onto the memory bus
+                    -- the I/O Bridge translates the data signal and passes it to the system bus.
+
+                - step 3: Data Load (System Bus → CPU Register)
+
+                    -- the CPU senses the data on the system bus
+                    -- it reads the data and copies it into the destination register, %rax
+
+        B. Disk Storage
+
+            
+
