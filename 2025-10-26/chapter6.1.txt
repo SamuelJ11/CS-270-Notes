@@ -174,5 +174,156 @@ CHAPTER 6:  THE MEMORY HEIRARCHY
 
         B. Disk Storage
 
-            
+            • Disks are workhorse storage devices that hold enormous amounts of data, on the order of hundreds to thousands of gigabytes, as opposed to the 
+              hundreds or thousands of megabytes in a RAM-based memory.
 
+            • Disks are constructed from platters, and each platter consists of two sides (surfaces) that are coated with magnetic recording material.
+
+                - a rotating spindle in the center of the platter spins the platter at a fixed rotational rate, typically between 5,400 and 15,000 revolutions 
+                  per minute (RPM)
+
+                  -- a CD is basically a single platter
+                  -- A hard drive is a stack of multiple platters, each spinning on the same spindle, which allows it to store much more data than a single CD
+
+            • Each surface consists of a collection of concentric rings called 'tracks'.
+
+                - each track is partitioned into a collection of sectors, and each sector contains an equal number of data bits (typically
+                  512 bytes) encoded in the magnetic material
+
+                - sectors are separated by 'gaps' where no data bits are stored, and serve as formatting bits that identify sectors
+
+            • A disk consists of one or more platters stacked on top of each other and encased in a sealed package (called a disk drive or just 'disk')
+
+            • A cylinder is the collection of tracks on all the surfaces that are equidistant from the center of the spindle  
+
+            • The maximum number o fbits that can be recorded by a disk is known as its maximum capacity, determined by:
+
+                - recording density: the number of bits that can be squeezed into a 1-inch segment of a track
+
+                - track density: the number of tracks that can be squeezed into a 1-inch segment of the radius extending from the center of the 
+                                 platter
+
+                - areal density: the product of the recording and track density (bits/in^2)
+
+            • Areal density is doubling every couple years
+
+                - original disks partitioned every track into the same number of sectors determined by the number of sectors that could
+                  be recorded on the inner-most (smallest) track
+
+                    -- as areal densities increased, gaps became unacceptably large, so modern high-capacity disks use a technique known as 
+                       'multiple zone recording' where the set of cylinders is partitioned into disjoint subsets known as 
+                        recording zones (rings of cylinders)
+
+                    -- each zone consists of a contiguous collection of cylinders (cylinders that are next to each other radially)                    
+                  
+                    -- every track in all cylinders of that zone has the same number of sectors
+
+                    -- outer zones have longer tracks → more sectors
+
+                    -- inner zones have shorter tracks → fewer sectors
+                    
+            • Capacity = (# of bytes per sector) * (average # of sectors per track) * (# of tracks per surface) * (# of surfaces per platter) * (# of platters)
+
+            • Disks read and write bits stored on their magnetic surfaces using a read/write head connected to the end of an actuator arm (see figure 6.10 on 
+              page 621)
+
+                - the mechanical motion of moving the arm back and forth along its raida axix above any track on the surface is known as a 'seek'
+
+                    -- once the head is positioned over the the desired track, as each bit on the track passes underneath, the head can can sense the 
+                       value of the bit (read) or alter the value of the bit (write)
+
+                - at any point in time, all heads are lined up vertically and move in unison (positioned on the same cylinder)
+
+                - the read/write head at the end of the arm flies on a thin cushion of air over the disk surface at a height of about 0.1 microns and a speed of about 80 km/h 
+                - this is analogous to placing a skyscraper on its side and flying it around the world at a height of 2.5 cm (1 inch) above the ground, with each orbit taking only 8 seconds 
+                - at these tolerances, even a tiny piece of dust on the surface is like a huge boulder. If the head were to strike one of these boulders, it would stop flying and crash into the surface, 
+                  resulting in a so-called head crash 
+                - for this reason, disks are always sealed in airtight packages
+
+            • Disks read and write data in sector-size blocks and the access time for a sector has three main components: 
+            
+                - seek time: the time required to move the arm, on average is 3 - 9 milliseconds
+
+                - rotational latency: the delay while the disk spins to position the target sector under the read/write head after it reaches the correct track 
+                                      the worst-case latency occurs if the head just misses the sector and must wait for a full rotation
+
+                                      maximum rotational latency = (1 / RPM) * (60 sec / 1 min)
+                                      average rotational latency = 1/2 of maximum rotational latency
+
+                - transfer time: the transfer time for one sector depends on the rotational speed and the number of sectors per track:
+
+                    average transfer time = (1 / RPM) * (1 / average # of sectors/track) * (60 secs / 1 min)
+
+            • We can estimate the average time to access the contents of a disk sector (access time) as the sum of the average seek time, the average rotational latency, 
+              and the average transfer time (see page 622 for an example calculation)
+
+                - The access time for a 64-bit word stored in SRAM is roughly 4 ns, and 60 ns for DRAM:
+
+                    -- access time for a 512-byte word in SRAM is thus 4 x 64 = 256 ns
+                    -- access time for a 512-byte word in DRAM is thus 60 x 64 = 4,000 ns
+
+                - The disk access time, roughly 10 ms, is about 40,000 times greater than SRAM, and about 2,500 times greater than DRAM!
+
+            • Modern disks are complex; disks have multiple platters, multiple surfaces, and different zones on those surfaces.
+
+                - to hide this complexity fromthe operating system, modern disks present a simpler view of their geometry as
+                  a sequence of B sector-size logical blocks, numbered 0, 1,...,B− 1
+
+                - a small hardware/firmware device in the disk package, called the 'disk controller', maintains the mapping between logical block numbers 
+                  and actual (physical) disk sectors
+
+                - when the operating system wants to perform an I/O operation such as reading a disk sector into main memory, it sends a command to the 
+                  disk controller asking it to read a particular logical block number
+
+                  -- firmware on the controller performs a fast table lookup that translates the logical block number into a (surface, track,
+                     sector) triple that uniquely identifies the corresponding physical sector
+
+                  -- hardware on the controller interprets this triple to move the heads to the appropriate cylinder, waits for the sector to pass 
+                     under the head, gathers up the bits sensed by the head into a small memory buffer on the controller, and copies them into main memory
+
+            • Input/output (I/O) devices such as graphics cards, monitors, mice, keyboards, and disks are connected to the CPU and main memory using an I/O bus.
+
+            • Although the I/O bus is slower than the system and memory buses, it can accommodate a wide variety of third-party I/O devices:
+
+                - a Universal Serial Bus (USB) controller is a conduit for devices attached to a USB bus
+
+                - a graphics card (or adapter) contains hardware and software logic that is responsible for painting the pixels on the display monitor 
+                  on behalf of the CPU
+
+                - a host bus adapter connects one or more disks to the I/O bus using a specific communication protocol, with the two most common interfaces being SCSI and SATA 
+                  
+                    -- SCSI disks are generally faster and more expensive than SATA drives; a SCSI adapter can support multiple disks, whereas a SATA adapter supports only one
+
+                - Additional devices, such as network adapters, can be attached to the I/O bus by plugging them into empty expansion slots on the motherboard that provide a direct 
+                  electrical connection to the I/O bus
+
+            • See figure 6.12 on page 627 for a summary of the steps that take place when a CPU reads data from a disk:
+
+                - the CPU issues commands to I/O devices using a technique called 'memory-mapped I/O'; in a system with memory-mapped I/O, a block of addresses in the address space 
+                  is reserved for communicating with I/O devices
+
+                - each of these addresses is known as an I/O port, and each device is associated with one or more ports when attached to the bus
+
+                - As a simple example, suppose that the disk controller is mapped to port 0xa0:
+
+                (1) CPU initiates a disk read by executing three store instructions to address 0xa0:
+
+                    - first instruction sends a read command instruction + other parameters like interrupt CPU when done
+                    - second instruction indicates the logical block number that should be read
+                    - third instruction indicates the main memory address where the contents of the disk sector should be stored
+
+                (2) after the disk controller recieves the read command from the CPU, is translates the logical block number to a sector 
+                    address, reads the contents of the sector, and tranfers the contents directly to main memory, without any intervention
+                    form the CPU
+
+                    - This is known as a direct memory access (DMA) and the transfer of this data is a DMA transfer
+
+                (3) after the DMA transfer is complete and the contents are stored in main memory, the disk controller notifies the CPU by
+                    sending an interrupt signal (signals an external pin on the CPU chip)
+
+                    - this causes the CPU to stop what it is doing and jump to an operating system routine, which records the fact that
+                      the I/O has finished and then returns control to the point where the CPU was interrupted
+
+        C. Solid State Disks
+
+                
