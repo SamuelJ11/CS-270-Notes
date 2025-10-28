@@ -456,5 +456,19 @@ CHAPTER 6:  THE MEMORY HEIRARCHY
 
         B.  Locality of Instruction Fetches
 
+            • Since program instructions are stored in memory and must be fetched (read) by the CPU, we can also evaluate the locality of a program 
+              with respect to its instruction fetches.
+
+            • Even though both are stored in memory, program code and data serve different purposes
+
+                | Code (Instructions)                                                           | Data (Variables)                                                    |
+                | ----------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+                | The CPU operations to execute (e.g., `add`, `load`, `jump`)                   | Values manipulated by the program (e.g., integers, arrays, structs) |
+                | Usually read-only while the program runs                                      | Read and written frequently                                         |
+                | Temporal locality is low (instructions executed once or a few times in loops) | Temporal locality can be high (variables updated repeatedly)        |
+                | Rarely modified at runtime (unless self-modifying code)                       | Frequently updated                                                  |
+
+    III. The Memory Heirarchy
+
 
 
