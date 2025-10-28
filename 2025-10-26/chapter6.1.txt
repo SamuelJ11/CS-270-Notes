@@ -326,4 +326,80 @@ CHAPTER 6:  THE MEMORY HEIRARCHY
 
         C. Solid State Disks
 
+            • A solid-state disk (SSD) is a storage device based on flash memory that can serve as an alternative to a conventional rotating disk. 
+            
+            • An SSD connects to the I/O bus (typically via USB or SATA) and handles CPU requests to read and write logical blocks:
+
+                - consists of flash memory chips and a flash translation layer, which acts like a disk controller by translating logical block requests into physical memory accesses
+
+            • In SSDs, reading data is quick, but writing data is slower because of how flash memory works:
+           
+                - flash memory is made of blocks, and each block is made of pages
+
+                - pages are the smallest unit you can read or write at a time (usually 512 bytes to 4 KB)
+
+                - blocks are a collection of pages (usually 32–128 pages) and range from 16 KB to 512 KB
+
+                - you cannot write to a page directly if the block already has data:
+
+                    -- before writing a page, you must erase the entire block it belongs to (setting all bits to 1)                    
                 
+                    -- after erasing, you can write each page in the block once
+
+                - each block can only handle about 100,000 erase/write cycles before it wears out
+
+                    -- after that, the block can no longer be used
+            
+            • If a page in a block already contains useful data (not all 1s), you can’t just erase it without losing the other pages, so the SSD must:
+
+                (1) copy all other useful pages into a newly erased block
+
+                (2) write the new page to that new block
+
+            • This extra copying takes time, especially if writes are randomly scattered across the disk.
+
+            • SSDs have several advantages to rotating disk drives, but also a couple drawbacks:
+
+                (1) more rugged: made of semiconductor memory and contain no moving parts
+
+                (2) much faster random access than hard drives
+
+                (3) use less power
+
+                SSDs disadvantages:
+
+                (1) limited lifespan: flash memory blocks wear out after many writes, although this is mitigated via wear-leveling logic, which spreads writes 
+                    evenly accross the SSD, extending the life of SSD's to last many years
+
+                (2) higher cost: about 30× more expensive per byte than rotating disk drives
+
+                (3) smaller capacity compared to HDDs, though this gap is shrinking as SSD prices drop
+
+        D. Storage Technology Trends
+
+            • Since 1985, both the cost and performance of SRAM technology have improved at roughly the same rate. 
+            
+                - access times and cost per megabyte have decreased by a factor of about 100
+
+            • The trends for DRAM and disks are very different; over time, the cost per megabyte of DRAM has dropped dramatically — by about 44,000×
+
+                - but the access time has only improved by a factor of 10
+
+                - disk technology has followed the same trend as DRAM but even more dramatically:
+
+                    -- while the cost of a megabyte of disk storage has plummeted by a factor of more than 3,000,000 since 1980, access
+                       times have improved by only a factor of 25
+            
+            • These trends show that it is much easier to increase density (and thereby reduce cost) than to decrease access time.
+
+            • If you include the effect of multiple cores, the overall CPU improvement is about 2,000× faster compared to 1985.
+
+                - meanwhile, DRAM and disk speeds have improved far less, so there’s now a huge gap between how fast the CPU can work and how fast it can get data
+
+            • Before multi-core processors (pre-2003), the performance gap between CPUs and memory/disks was mainly due to latency — memory and disk access times weren’t improving as fast as CPU speed.
+
+            • After multi-core processors were introduced, the gap became more about throughput — multiple cores can access memory and disks at the same time, increasing the total number of requests. 
+           
+                * see figure 6.16 on page 632 for a graphical representation of these trends (same pic from lecture slides)
+
+    II. Locality
