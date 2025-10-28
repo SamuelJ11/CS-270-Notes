@@ -403,3 +403,58 @@ CHAPTER 6:  THE MEMORY HEIRARCHY
                 * see figure 6.16 on page 632 for a graphical representation of these trends (same pic from lecture slides)
 
     II. Locality
+
+        • Well-written computer programs tend to exhibit good locality; they tend to reference data items that are near other recently referenced data items or that were recently referenced themselves.
+
+        • Locality is typically described as having two distinct forms: temporal locality and spatial locality
+
+        • At the hardware level, the principle of locality allows computer designers to speed up main memory accesses by introducing small fast memories known as cache memories that hold blocks of
+          the most recently referenced instructions and data items. 
+
+        • Similarly, the operating system uses main memory to cache the most recently used disk blocks in the disk file system.
+
+        • The principle of locality also plays a crucial role in the design of application programs. 
+        
+            - for example, Web browsers exploit temporal locality by caching recently referenced documents on a local disk
+
+        A. Locality of References to Program Data
+
+            • Consider the locality of the function below:
+
+                int sumvec(int v[N]) {
+                int i, sum = 0;
+
+                for (i = 0; i < N; i++)
+                    sum += v[i];
+
+                return sum;
+                }   
+
+                (1) the variable sum is used in every loop iteration, which means the CPU reuses it often = sum has good temporal locality
+
+                (2) sum is just a single number, so there’s no “neighboring” data = no spacial locality
+
+                (3) the vector 'v' has good spatial locality since the program is reading data that’s right next to each other in memory
+
+                (4) However, each element of v is only read once — it’s never reused = v has poor temporal locality
+
+                Overall, the function enjoys good locality
+            
+            • A function like sumvec, which visits each element of a vector sequentially, is said to have a 'stride-1' (sequential) reference pattern.
+
+                - visiting every kth element of a contiguous vector is called a stride-k reference pattern
+
+                    -- as k increases, spacial locality decreases
+
+            • See locality.c for a demonstration of how programs with good locality can run significantly faster that those with poor locality:
+
+                - in this case, a function that iterates through a 10,000 x 10,000 array in row-major order is roughly 4-6 times faster than than the 
+                  function that does so using column-major order (note that the codespaces is masking a large part of the performance difference)
+
+                - since C arrays are laid out in memory row-wise, the result is a stride-1 reference pattern for sumArrayRows and a 
+                  stride-10000 reference pattern for sumArrayCols
+
+        B.  Locality of Instruction Fetches
+
+
+
