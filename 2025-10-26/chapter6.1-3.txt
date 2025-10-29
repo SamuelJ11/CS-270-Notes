@@ -470,5 +470,64 @@ CHAPTER 6:  THE MEMORY HEIRARCHY
 
     III. The Memory Heirarchy
 
+        • In general, the storage devices get slower, cheaper, and larger as we move from higher to lower levels of the memory heirarchy (see figure 6.21 on
+            page 638).
+
+        A. Caching in the Memory Hierarchy 
+
+            • Each level in the hierarchy caches data objects from the next lower level
+
+            • Data are always copied back and forth between level k and level k + 1 in block-size transfer units:
+
+                - while the block size is fixed between any particular pair of adjacent levels in the hierarchy, other pairs of levels can have different block sizes
+
+                - In general, devices lower in the hierarchy (further from the CPU) have longer access times, and thus tend to use larger block sizes 
+                  in order to amortize these longer access times
+
+            • Consider the figure below to understand cache 'hits' and 'misses'
+
+                Level k:  
+                    +----+----+----+----+
+                    | 4  | 9  | 14 | 3  |
+                    +----+----+----+----+
+                        
+                        
+                Level k+1:
+                    +----+----+----+----+
+                    | 0  | 1  | 2  | 3  |
+                    +----+----+----+----+
+                    | 4  | 5  | 6  | 7  |
+                    +----+----+----+----+
+                    | 8  | 9  | 10 | 11 |
+                    +----+----+----+----+
+                    | 12 | 13 | 14 | 15 |
+                    +----+----+----+----+
+
+            • When a program needs a particular data object d from level k + 1, it first looks for d in one of the blocks currently stored at level k.
+
+                - if d happens to be cached at level k, then we have what is called a 'cache hit'
+
+            • If on the other hand, the data object d is not cached at level k, then we have what is called a 'cache miss'.
+
+                - when there is a miss, the cache at level k fetches the block containing d from the cache at level k + 1, possibly overwriting an 
+                  existing block if the level k cache is already full
+
+                - this process of overwriting an existing block is known as replacing or evicting the block:
+
+                    -- the block that is evicted is called the 'victim block'
+
+            • A cold cache is simply an empty cache, and if the cache at level k is empty, then any access of any data object will miss:
+
+                - this is known as a 'cold miss'
+
+            • Hardware caches typically implement a simple placement policy that restricts a particular block at level k + 1 to a small subset (sometimes a singleton)
+              of the blocks at level k
+
+                - in this example, blocks i at level k + 1 must be placed in block (i mod 4) at level k
+
+            • Restrictive placement policies of this kind lead to a type of miss known as a 'conflict miss'.
+
+            • If the cache is simply too small to hold the referenced data, this is known as a 'capacity miss'.
+
 
 
