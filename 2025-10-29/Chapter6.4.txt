@@ -1,0 +1,234 @@
+CHAPTER 6:  THE MEMORY HEIRARCHY
+
+    IV. Cache memories
+
+        • For the discussion that follows, we will assume a simple memory hierarchy with a single L1 cache between the CPU and main memory.
+
+        A. Generic Cache Memory Organization
+
+            • When the CPU executes a load from address A, it sends A to the cache.
+
+                - the bits of A are divided into the tag, set index, and block offset, which together specify where the data might reside in the cache
+
+                - if the cache contains a valid block whose tag matches A's tag, the cache returns the requested word directly to the CPU (a cache hit)
+
+                - otherwise, the cache fetches the entire block containing address A from main memory, stores it, and then supplies the word to the CPU (a cache miss)
+
+            • Each memory address has m bits that form M = 2ᵐ unique addresses.
+            
+            • Following figure 6.25(a) on page 644, a cache is organized as an array of S = 2ˢ cache sets, where:
+
+                - each set consists of 'E' cache lines
+
+                - each line consists of a data 'block' (B) of B = 2ᵇ bytes, a valid bit (whether or not the line contains meaningful information) and 
+                  t = m − (b + s) tag bits
+
+                - for example, consider a system where:
+
+                    B = 64 bytes (block size)                             
+                    m = 32 (32 bit addresses)
+                    S = 128 (number of cache sets)              
+
+                    then:
+
+                    b = 6 (2⁶ = 64)                             
+                    s = 7 (2⁷ = 128)                            
+                    m = 32 (32-bit addresses)
+                    t = 19 (32 − (6 + 7))
+
+                    therefore the m address bits are partitioned into 6 block offset bits, 7 set index bits and 19 tag bits
+
+            • The set index bits tell us which set the word must be stored in.
+
+            • Once we know which set the word must be contained in, the t tag bits in A tell us which line (if any) in the set contains the word. 
+
+            • The b block offset bits give us the offset of the word in the B-byte data block.
+
+        B. Direct-Mapped Caches
+
+            • A cache with exactly one line per set (E = 1) is known as a direct-mapped cache
+
+            • The process that a cache goes through of determining whether a request is a hit or a miss and then extracting the requested word consists
+              of three steps: (1) set selection, (2) line matching, and (3) word extraction.
+
+                - set selection: the cache extracts the s set index bits from the middle of the address for 'w'.  
+                                 the bits are interpreted as an unsigned integer that corresponds to a set number
+
+                - line matching: a copy of w is contained in the line if and only if the valid bit is set and the tag 
+                                 in the cache line matches the tag in the address of w
+
+                - word selection: once we have a hit, we know that w is somewhere in the block; the block offset bits provide 
+                                  us with the offset of the first byte in the desired word
+
+
+            • If the cache misses, the new block must fetched from memory must be stored in one of the cache lines of the set indicated by the set index bits.
+
+            • Suppose we have a direct-mapped cache described by S,E,B,m = (4,1,2,4):
+
+                - remember this means m = 4, t = 1, s = 2, b = 1, 
+
+                - in other words, the cache has four sets, one line per set, 2 bytes per block, and 4-bit addresses       
+
+                - we will also assume that each word is a single byte
+
+            • Reference the enumerated address space on page 648 to understand the following:
+
+                - the concatenation of the tag and index bits uniquely identifies each block in memory
+
+                    -- for example, block 0 consists of addresses 0 and 1
+
+                - since there are eight memory blocks but only four cache sets, multiple blocks map to the same cache set 
+
+                    -- for example, blocks 0 and 4 both map to set 0
+
+                - blocks that map to the same cache set are uniquely identified by the tag
+
+                    -- for example,  block 0 has a tag bit of 0 while block 4 has a tag bit of 1
+
+            • Below is a manual walkthrough of CPU cache reads, where each row in the table represents a cache line.
+
+                (0) Initially, the cache is empty (each valid bit is 0):
+
+                Set     Valid   Tag     block[0]    block[1]
+                0       0
+                1       0
+                2       0
+                3       0
+
+                
+                (1) Read word at address 0 (0000):
+
+                    - since the valid bit for set 0 is 0, this is a cache miss
+                    
+                    - the cache fetches block 0 (000) from memory (or a lower-level cache) and stores the block in set 0
+
+                    - then the cache returns m[0] (the contents of memory location 0) from block[0] of the newly fetched cache line
+
+                    Set     Valid   Tag     block[0]    block[1]
+                    0       1       0       m[0]        m[1]
+                    1       0
+                    2       0
+                    3       0
+
+                    * note that m[1] was cached as well because both addresses 0 and 1 share the same set and tag bits (000), and consequently the 
+                      same block number
+                      
+
+                (2) Read word at address 1 (0001):
+
+                Set     Valid   Tag     block[0]    block[1]
+                0       1       0       m[0]        m[1]
+                1       0
+                2       0
+                3       0
+
+                    - this is a cache hit. The cache immediately returns m[1] from block [1] of the cache line
+                    
+                    - the state of the cache does not change
+
+                (3) Read word at address 13 (1101)
+
+                    - since the valid bit for set 2 is 0, this is a cache miss
+
+                    - the cache fetches block 6 (110) from memory and stores the block in set 2
+
+                    - then the cache returns m[13] and m[12] from block[6] of the newly fetched cache line
+
+                    Set     Valid   Tag     block[0]    block[1]
+                    0       1       0       m[0]        m[1]
+                    1       0
+                    2       1       1       m[12]       m[13]
+                    3       0
+
+                (4) Read word at address 8 (1000)
+
+                    - this is a miss; the cache line in set 0 is indeed valid, but the tags do not match
+
+                    - the cache loads block 4 (100) into set 0 (evicting m[0] and m[1]) and returns m[8] and m[9] from block[0] and [1] of the new cache line
+
+                    Set     Valid   Tag     block[0]    block[1]
+                    0       1       1       m[8]        m[9]
+                    1       0
+                    2       1       1       m[12]       m[13]
+                    3       0
+
+                (5) Read word at address 0 (0000)
+
+                    - yet another miss due to the unfortunate fact that we just replaced block 0 during the previous reference to address 8 (m[8])
+
+                    - this is an example of a conflict miss
+
+                    Set     Valid   Tag     block[0]    block[1]
+                    0       1       0       m[0]        m[1]
+                    1       0
+                    2       1       1       m[12]       m[13]
+                    3       0
+
+            • Conflict misses in direct-mapped caches typically occur when programs access arrays whose sizes are a power of 2:
+
+                float dot_prod(float x[8], float y[8])
+                {
+                    float sum = 0.0;
+                    int i;
+
+                    for (i = 0; i < 8; i++)
+                        sum += x[i] * y[i];
+                    
+                    return sum;
+                }
+
+                - suppose that floats are 4 bytes, that x is loaded into the 32 bytes of contiguous memory starting at address 0, and that y starts 
+                  immediately after x at address 32
+
+                - suppose also that a block is 16 bytes (big enough to hold four floats) and that the cache consists of two sets, for a total cache size of 32 bytes
+
+                - we will assume that the variable 'sum' is actually stored in a CPU register and thus does not require a memory reference            
+
+                    ┌─────────┬─────────┬───────────┐   ┌─────────┬─────────┬───────────┐
+                    │ Element │ Address │ Set index │   │ Element │ Address │ Set index │
+                    ├─────────┼─────────┼───────────┤   ├─────────┼─────────┼───────────┤
+                    │ x [0]   │    0    │     0     │   │ y [0]   │    32   │     0     │
+                    │ x [1]   │    4    │     0     │   │ y [1]   │    36   │     0     │
+                    │ x [2]   │    8    │     0     │   │ y [2]   │    40   │     0     │
+                    │ x [3]   │   12    │     0     │   │ y [3]   │    44   │     0     │
+                    │ x [4]   │   16    │     1     │   │ y [4]   │    48   │     1     │
+                    │ x [5]   │   20    │     1     │   │ y [5]   │    52   │     1     │
+                    │ x [6]   │   24    │     1     │   │ y [6]   │    56   │     1     │
+                    │ x [7]   │   28    │     1     │   │ y [7]   │    60   │     1     │
+                    └─────────┴─────────┴───────────┘   └─────────┴─────────┴───────────┘
+
+                (1) at runtime, the first iteration of the loop references x[0], a miss that causes the block containing x[0] – x[3] to be loaded into set 0
+
+                (2) the next reference is to y[0], another miss that causes the block containing y[0] – y[3] to be copied into set 0, overwriting the values of x 
+                    that were copied in by the previous reference
+
+                (3) during the next iteration, the reference to x[1] misses, which causes the x[0] – x[3] block to be loaded back into set 0, overwriting the y[0] - y[3] block
+
+                (4) each subsequent reference to x and y will result in a conflict miss as we thrash back and forth between blocks of x and y
+
+                    - The term 'thrashing' describes any situation where a cache is repeatedly loading and evicting the same sets of cache blocks
+
+            • Luckily, thrashing is easy for programmers to fix once they recognize what is going on.
+            
+                - one easy solution is to put B bytes of padding at the end of each array
+
+            • For example, instead of defining x to be float x[8], we define it to be float x[12]:
+
+
+                    ┌─────────┬─────────┬───────────┐   ┌─────────┬─────────┬───────────┐
+                    │ Element │ Address │ Set index │   │ Element │ Address │ Set index │
+                    ├─────────┼─────────┼───────────┤   ├─────────┼─────────┼───────────┤
+                    │ x [0]   │    0    │     0     │   │ y [0]   │    48   │     0     │
+                    │ x [1]   │    4    │     0     │   │ y [1]   │    52   │     0     │
+                    │ x [2]   │    8    │     0     │   │ y [2]   │    56   │     0     │
+                    │ x [3]   │   12    │     0     │   │ y [3]   │    60   │     0     │
+                    │ x [4]   │   16    │     1     │   │ y [4]   │    64   │     1     │
+                    │ x [5]   │   20    │     1     │   │ y [5]   │    68   │     1     │
+                    │ x [6]   │   24    │     1     │   │ y [6]   │    72   │     1     │
+                    │ x [7]   │   28    │     1     │   │ y [7]   │    76   │     1     │
+                    └─────────┴─────────┴───────────┘   └─────────┴─────────┴───────────┘
+
+                - with the padding at the end of x, x[i] and y[i] now map to different sets, which eliminates the thrashing conflict misses
+
+
+        C. Set Associative Caches
