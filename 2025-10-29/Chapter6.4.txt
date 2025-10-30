@@ -94,7 +94,6 @@ CHAPTER 6:  THE MEMORY HEIRARCHY
                 1       0
                 2       0
                 3       0
-
                 
                 (1) Read word at address 0 (0000):
 
@@ -111,8 +110,7 @@ CHAPTER 6:  THE MEMORY HEIRARCHY
                     3       0
 
                     * note that m[1] was cached as well because both addresses 0 and 1 share the same set and tag bits (000), and consequently the 
-                      same block number
-                      
+                      same block number                      
 
                 (2) Read word at address 1 (0001):
 
@@ -214,7 +212,6 @@ CHAPTER 6:  THE MEMORY HEIRARCHY
 
             • For example, instead of defining x to be float x[8], we define it to be float x[12]:
 
-
                     ┌─────────┬─────────┬───────────┐   ┌─────────┬─────────┬───────────┐
                     │ Element │ Address │ Set index │   │ Element │ Address │ Set index │
                     ├─────────┼─────────┼───────────┤   ├─────────┼─────────┼───────────┤
@@ -229,6 +226,5 @@ CHAPTER 6:  THE MEMORY HEIRARCHY
                     └─────────┴─────────┴───────────┘   └─────────┴─────────┴───────────┘
 
                 - with the padding at the end of x, x[i] and y[i] now map to different sets, which eliminates the thrashing conflict misses
-
 
         C. Set Associative Caches
