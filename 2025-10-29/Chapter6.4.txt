@@ -227,4 +227,146 @@ CHAPTER 6:  THE MEMORY HEIRARCHY
 
                 - with the padding at the end of x, x[i] and y[i] now map to different sets, which eliminates the thrashing conflict misses
 
-        C. Set Associative Caches
+        C. Set Associative Caches  
+
+            • This is simply a cache with more than one line per set
+
+            • Recall that the total number of lines is given by (total cache size (in bytes) / block size (in bytes))
+
+            • A cache with 1 < E < C/B is often called an 'E-way set associative cache'
+
+            • Set selection is identical to a direct-mapped cache, with the set index bits identifying the set.
+
+            • However, the cache cannot simply use an address to find the data; instead, it must look at all lines in that set simultaneously to find a match:
+
+                - the cache sends the tag from the address to the set. 
+                - all lines in the set check if their stored (Valid Bit + Tag) matches the incoming tag
+                - if a match is found, the block offset selects a word from the block (hit)
+
+                * see figure 6.34 on page 654 for a visual aid 
+
+            • For cache misses, the simplest replacement policy is to choose the line to replace at random
+
+                - other more sophisticated policies like the least frequently used (LFU) and least recently used (LRU)
+
+                - all of these policies require additional time and hardware
+
+                    -- but as we move further down the memory hierarchy, away from the CPU, the cost of a miss becomes more expensive and it becomes 
+                       more worthwhile to minimize misses with good replacement policies
+
+            D. Fully Associative Caches 
+
+                • A fully associative cache consists of a single set (E = C/B) that contains all of the cache lines.
+
+                • Since the entire cache is one set, set 0 is selected by default and there is no need for set index bits.
+
+                    - the tag bits in one of the cache lines must simply match that of the bits in the address
+
+                • The key issue is that in a fully associative cache, a memory block can be stored in any line in the entire cache. 
+
+                    - this is maximum flexibility, but it creates a massive hardware challenge: line matching
+
+                • To determine if the requested data is present, the cache circuitry must:
+
+                    - check the tag and valid Bit for every single cache line in parallel
+
+                    - the more lines there are, the more comparisons must happen at the exact same time
+
+                    - for a large cache, this means building a circuit that can check potentially thousands or millions of lines simultaneously
+
+                • As a result, fully associative caches are only appropriate for small caches, such as the translation lookaside buffers (TLBs) in virtual 
+                  memory systems that cache page table entries.
+
+            E. Issues with Writes
+
+                • There are two main policies for writing a word w that is already cached (a write hit):
+
+                    - write-through (simplest approach):  cache immediately updates (or "writes through") the corresponding block in the next lower 
+                      level of the memory hierarchy
+
+                    - write-back (more efficient but more overhead): the updated block is stored in the next lower level only when it is evicted from the 
+                      cache by the replacement algorithm, thus deferring the update as long as possible
+
+                      --  cache must maintain an additional dirty bit for each cache line that indicates whether or not the cache block has been
+                          modified (indicates that the line must be written back to memory upon eviction)
+
+                • Another issue is how to deal with write misses (the CPU tries to write data to a word w that is not currently in the cache):
+
+                    - write-allocate: the cache first fetches the entire block containing w from the next lower level of memory and loads it into a cache line
+
+                    - no-write-allocate: The word w is written directly to the next lower level of memory without bringing the corresponding block into the cache
+
+                • Write-through caches are typically no-write-allocate, and write-back caches are typically write-allocate.
+
+            F. Anatomy of a Real Cache Hierarchy
+
+                • Caches can hold instructions as well as data:
+
+                    - caches that hold program-data only are called 'd-caches'
+
+                    - caches that hold program instructions only are called 'i-caches'
+
+                    - cahces that hold both are 'unified caches'
+
+                • See figure 6.38 on page 660 for a visual representation of an Intel Core i7 cache hierarchy.
+
+                    - each CPU chip has four cores, and each core has its own private L1 i-cache, L1 d-cache, and L2 unified cache 
+                    
+                    - all of the cores share an on-chip L3 unified cache
+
+            G. Performance Impact of Cache Parameters
+
+                • Cache performance is evaluated with a number of metrics:
+
+                    - miss rate: the fraction of memory references during the execution of a program that miss (# of misses / # of references)
+
+                    - hit rate: the fraction of memory references that hit (1 - miss rate)
+
+                    - hit time: the time to deliver a word in the cache to the CPU
+
+                    - miss penalty: any additional time required because of a miss
+
+                • The impact of block size can be described succinctly by the table below:
+
+                    ┌───────────┬───────────────────────────────────────────┬──────────────────────────────────────────────┐
+                    │ Condition │ Large Block Size (Fewer Lines)            │ Small Block Size (More Lines)                │
+                    ├───────────┼───────────────────────────────────────────┼──────────────────────────────────────────────┤
+                    │ Good for  │ Spatial Locality (Bringing in lots of     │ Temporal Locality (More unique slots         │
+                    │           │ nearby data)                              │ to hold many reused blocks)                  │
+                    ├───────────┼───────────────────────────────────────────┼──────────────────────────────────────────────┤
+                    │ Bad for   │ Temporal Locality (Fewer slots means      │ Spatial Locality (Less data brought in       │
+                    │           │ blocks are evicted sooner)                │ per miss)                                    │
+                    └───────────┴───────────────────────────────────────────┴──────────────────────────────────────────────┘
+                
+                • Below is a summary of the associativity trade off:                
+
+                    ┌───────────────────────────┬───────────────────────────────────────────┬─────────────────────────────────────────────┐
+                    │ Impact Factor             │ Higher Associativity (Larger E)           │ Lower Associativity (Smaller E)             │
+                    ├───────────────────────────┼───────────────────────────────────────────┼─────────────────────────────────────────────┤
+                    │ Conflict Misses (Hit Rate)│ Significantly Decreased (Good)            │ Increased (Vulnerable to thrashing)         │
+                    ├───────────────────────────┼───────────────────────────────────────────┼─────────────────────────────────────────────┤
+                    │ Implementation Cost       │ High (More tag storage, LRU bits,         │ Low (Simple logic, less overhead)           │
+                    │                           │ parallel comparators)                     │                                             │
+                    ├───────────────────────────┼───────────────────────────────────────────┼─────────────────────────────────────────────┤
+                    │ Hit Time                  │ Increases (Due to complex parallel        │ Decreases (Faster lookup)                   │
+                    │                           │ search logic)                             │                                             │
+                    ├───────────────────────────┼───────────────────────────────────────────┼─────────────────────────────────────────────┤
+                    │ Miss Penalty              │ Increases (More complex victim            │ Decreases (Simpler eviction process)        │
+                    │                           │ choice logic)                             │                                             │
+                    └───────────────────────────┴───────────────────────────────────────────┴─────────────────────────────────────────────┘
+
+
+                • Below is a summary of write-through and write-back policies:
+
+                    ┌───────────────────┬──────────────────────────────────────────────────────────────────────────────────────────┐
+                    │ Write Policy      │ Key Characteristics and Trade-offs                                                       │
+                    ├───────────────────┼──────────────────────────────────────────────────────────────────────────────────────────┤
+                    │ Write-Through     │ • Simpler to implement.                                                                  │
+                    │                   │ • Can use a write buffer to update memory independently of the cache.                    │
+                    │                   │ • Read misses are less expensive (do not trigger a memory write).                        │
+                    │                   │ • Disadvantage: Causes high bus traffic with every write.                                │
+                    ├───────────────────┼──────────────────────────────────────────────────────────────────────────────────────────┤
+                    │ Write-Back        │ • Results in fewer transfers (due to locality), saving memory bandwidth for DMA/I/O.     │
+                    │                   │ • Critical for lower-level caches (L2/L3/Virtual Memory) where transfer times are high.  │
+                    │                   │ • Disadvantage: More complex to implement (requires a dirty bit and eviction logic).     │
+                    └───────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘
