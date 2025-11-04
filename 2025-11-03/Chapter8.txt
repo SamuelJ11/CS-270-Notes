@@ -166,9 +166,86 @@ CHAPTER 8:  EXCEPTIONAL CONTROL FLOW
 
     II. Processes
 
-    
+        • Exceptions are the basic building blocks that allow the operating system kernel to provide the notion of a process, one of the most profound and 
+          successful ideas in computer science.
 
+        • The classic definition of a process is an instance of a program in execution, and its context (code, memory, registers, program counter, stack,
+          environment, and open files) is everything the OS needs to execute or resume it correctly.
+
+        A. Logical Control flow
+
+            • Processes take turns using the processor, and each process is preempted (temporarily suspended) while other processes take thier turns.
+
+        B. Concurrent Flows 
+
+            • A logical flow whose execution overlaps in time with another flow is called a 'concurrent flow'.
+
+            • The general phenomenon of multiple flows executing concurrently is known as 'concurrency' aka 'multitasking'.
+
+            • If two flows are running concurrently on different processor cores or computers, then we say that they are 'parallel' flows
+
+                - quick analogy:
+
+                    concurrency: like a single cook juggling multiple dishes — switching between them to make progress on all
+
+                    parallelism: like multiple cooks each working on a dish at the same time
+
+        C. Private Address Space
+
+            • A process provides each program with its own private address space. 
             
+                - this space is private in the sense that a byte of memory associated with a particular address in the space cannot in general be
+                  read or written by any other process.
+
+            • See figure 8.13 on page 761 to understand the discussion below:
+
+                - the bottom portion of the address space is reserved for the user program, including the usual code, data, heap, and stack segments
+
+                - rhe top portion of the address space is reserved for the kernel
+
+        D. User and Kernel Modes
+
+            • In order for the operating system kernel to provide an airtight process abstraction, the processor must provide a mechanism that 
+              restricts the instructions that an application can execute, as well as the portions of the address space that it can access.
+
+                - processors typically provide this capability with a mode bit in a control register: 
+
+                    -- when the mode bit is set, the process is running in kernel mode
+
+                    -- when the mode bit is not set, the process is running in user mode
+
+            • Linux provides a clever mechanism, called the /proc filesystem, that allows user mode processes to access the contents of 
+              kernel data structures
+
+                - both /proc and /sys are interfaces to the kernel for user programs
+
+                - they export kernel data as readable files, making it easy to inspect system state or hardware without directly accessing kernel memory
+
+        E. Context Switches
+
+            • The context switch mechanism is built on top of the lower-level exception mechanism
+
+            • The kernel maintains a context (state that the kernel needs to restart a preempted process) for each process.
+            
+            • At certain points during the execution of a process, the kernel can decide to preempt the current process and restart a previously 
+              preempted process. 
+              
+                - this decision is known as 'scheduling' and is handled by code in the kernel, called the 'scheduler'.
+
+            • After the kernel has scheduled a new process to run, it preempts the current process and transfers control to the new process using a 
+              mechanism called a context switch, which:
+
+                (1) Saves the context of the current process
+
+                (2) Restores the saved context of a previously preempted process
+
+                (3) Passes control to this newly restored process
+
+            • All systems have some mechanism for generating periodic timer interrupts, typically every 1ms or 10ms.
+
+                - each time a timer interrupt occurs, the kernel can decide that the current process has run long enough and switch to a new process
+
+            • See figure 8.14 on page 763 for a visual of the anatomy of a process context switch.
 
 
 
