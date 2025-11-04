@@ -1,0 +1,179 @@
+CHAPTER 8:  EXCEPTIONAL CONTROL FLOW
+
+    I. Exceptions
+
+        • Exceptions are a form of exception control flow (ECF) that are implemented partly by the hardware and partly by the operating system:
+
+            - the details vary from system to system but the basic ideas are the same
+
+        • An exception is an abrupt change in the control flow in response to some change in the processor's state
+
+            - the change in state is known as an 'event'
+
+        • When the processor detects that the event has occured, it makes an indirect procedure call through a jump table called an 'exception table'
+
+            - this jump is done to an operating system subroutine (the exception handler) that is specifically designed to process this kind of event
+
+        • When the exception handler finishes, one of three things happen:
+
+            (1) the hander returns control to the current instructions
+
+            (2) the handler returns control to the next instruction
+
+            (3) the handler aborts the interrupted program
+
+        A. Exception Handling
+
+            • At system boot time, the operating system allocates and initializes a jump table called an exception table, so that entry 'k' contains the address 
+              of the handler for exception 'k'.
+
+                - entry 'k' contains the address of the handler code for exception 'k'
+
+            • Each type of possible exception in a system is assigned a unique non-negative integer exception number, which is the index into the exception 
+              table (see figure 8.2-3 page 751)
+
+            • The CPU keeps a special register called the 'exception table base register' (ETBR) that holds the starting address of the exception table in memory:
+
+                - when the processor triggers an exception by making an indirect procedure call through entry k of the exception table, the processor forms the 
+                  address of the appropriate exception handler using the formula below:
+
+                  address of handler = contents of memory at ETBR + (k * 8)
+
+            • When an exception occurs, the processor saves the current execution state before jumping to the handler. 
+            
+            • The processor pushes a return address (either the current or next instruction, depending on the exception type) and other key information such as the EFLAGS register onto the stack. 
+            
+                - if the exception transfers control from a user program to the kernel, this data is pushed onto the kernel stack
+
+            • After the handler has processed the event, it optionally returns to the interrupted program by executing a special “return from interrupt” instruction:
+
+                - this instruction tells the CPU to pop the saved state (program counter, flags, etc.) from the stack, wwitch back to user mode if needed, 
+                  and resume execution at the saved return address
+
+        B. Classes of Exceptions
+
+            • Exceptions can be divided into four classes: interrupts, traps, faults, and aborts:
+
+                +-----------+------------------------------+-------------+-------------------------------------+
+                | Class     | Cause                        | Async/sync  | Return behavior                     |
+                +===========+==============================+=============+=====================================+
+                | Interrupt | Signal from I/O device       | Async       | Always returns to next instruction  |
+                +-----------+------------------------------+-------------+-------------------------------------+
+                | Trap      | Intentional exception        | Sync        | Always returns to next instruction  |
+                +-----------+------------------------------+-------------+-------------------------------------+
+                | Fault     | Potentially recoverable error| Sync        | Might return to current instruction |
+                +-----------+------------------------------+-------------+-------------------------------------+
+                | Abort     | Nonrecoverable error         | Sync        | Never returns                       |
+                +-----------+------------------------------+-------------+-------------------------------------+
+
+
+            • I/O devices trigger interrupts by signaling a pin on the processor chip and placing on to the system bus the exception number that identifies the device 
+              that caused the interrupt.
+
+                - the processor then reads the exception number from the system bus, and then calls the appropriate interrupt handler
+
+            • Traps occurs when a program executes a particular instruction that asks the operating system (via a system call) to do something that user code itself isn’t 
+              allowed to do directly (read a file, start a new process, or exit)
+
+            • Faults result from error conditions that a handler might be able to correct.
+
+                - control is always returned to the faulting instruction
+
+            • Aborts result from unrecoverable fatal errors
+
+        C. Exceptions in Linux/x86-64 Systems
+
+            • There can be up to 256 exception types. Numbers 0–31 are fixed by the Intel architecture for x86-64 systems, while numbers 32–255 are defined by 
+              the operating system for interrupts and traps:
+
+                (1) Divide error (exception 0): Unix does not attempt to recover from divide erros, and Linux shells typically report divide erros as "Floating exceptions"
+
+                (2) General protection fault (exception 13): a program references an undefined area of virtual memory or the program attempts to write to a 
+                    read-only text segment.  linux shells report these as "segmentation faults"
+
+                (3) Page fault (exception 14): programs use virtual memory addresses, which are mapped to physical memory (RAM).  
+                
+                    -- when a program tries to access a virtual memory page that isn’t currently in physical memory, the CPU triggers a page fault exception 
+                    
+                    -- the page fault handler loads the page into physical memory and updates the page table, so the virtual address now points to the correct 
+                       physical memory location
+                       
+                    -- Once the page is in RAM and the mapping is updated, the CPU re-executes the instruction that caused the page fault
+
+                (4) Machine check (exception 18): fatal hardware error detected during the execution of the faulting instruction
+
+            • C programs can invoke any system call directly by using the syscall function, but this is rarely necessary in practice. 
+            
+                - the C standard library provides a set of convenient wrapper functions for most system calls
+
+            • System calls and their associated wrapper functions will be referred to interchangeably as 'system-level functions'.
+
+                +------------------+------------------+-------------------------------------+
+                | System Call      | Name             | Description                         |
+                | Number           |                  |                                     |
+                +==================+==================+-------------------------------------+
+                | 0                | read             | Read file                           |
+                +------------------+------------------+-------------------------------------+
+                | 1                | write            | Write file                          |
+                +------------------+------------------+-------------------------------------+
+                | 2                | open             | Open file                           |
+                +------------------+------------------+-------------------------------------+
+                | 3                | close            | Close file                          |
+                +------------------+------------------+-------------------------------------+
+                | 4                | stat             | Get info about file                 |
+                +------------------+------------------+-------------------------------------+
+                | 9                | mmap             | Map memory page to file             |
+                +------------------+------------------+-------------------------------------+
+                | 12               | brk              | Reset the top of the heap           |
+                +------------------+------------------+-------------------------------------+
+                | 32               | dup2             | Copy file descriptor                |
+                +------------------+------------------+-------------------------------------+
+                | 33               | pause            | Suspend process until signal arrives|
+                +------------------+------------------+-------------------------------------+
+                | 37               | alarm            | Schedule delivery of alarm signal   |
+                +------------------+------------------+-------------------------------------+
+                | 39               | getpid           | Get process ID                      |
+                +------------------+------------------+-------------------------------------+
+                | 57               | fork             | Create process                      |
+                +------------------+------------------+-------------------------------------+
+                | 59               | execve           | Execute a program                   |
+                +------------------+------------------+-------------------------------------+
+                | 60               | _exit            | Terminate process                   |
+                +------------------+------------------+-------------------------------------+
+                | 61               | wait4            | Wait for a process to terminate     |
+                +------------------+------------------+-------------------------------------+
+                | 62               | kill             | Send signal to a process            |
+                +------------------+------------------+-------------------------------------+
+
+            • All arguments to Linux system calls are passed through general-purpose registers rather than the stack. 
+            
+                - by convention, %rax contains the system call number, and up to six arguments are placed in %rdi, %rsi, %rdx, %r10, %r8, and %r9
+
+            • Consider the code below: 
+
+                #include <unistd.h>
+
+                int main() {
+                    write(1, "hello, world\n", 13);
+                    _exit(0);
+                }
+
+                - the first argument to write sends the output to std out
+
+                - the second argument is the sequence of bytes to write
+                
+                - the third argument specifies the number of bytes to write
+
+    II. Processes
+
+    
+
+            
+
+
+
+
+
+
+
+    
