@@ -1,0 +1,40 @@
+CHAPTER 8:  EXCEPTIONAL CONTROL FLOW
+
+    IV. Process Control
+
+        A. Obtaining Process ID's
+
+            • Each process has a unique positive (nonzero) process ID (PID), and the getpid function returns the PID of the calling process.
+
+            • The getppid function returns the PID of its parent
+
+                -  both getpid and getppid routines return an integer value of type pid_t (defined in types.h as 'int')
+
+        B. Creating and Terminating Processes
+
+            • A process is always in either 1 of 3 states:
+
+                (1) running: process executes instructions or is scheduled by the kernel
+                
+                (2) stopped: process paused, waiting for signal
+
+                (3) terminated: process is done and removed from memory
+
+            • A parent process creates a new running child process by calling the fork function:
+
+                #include <sys/types.h>
+                #include <unistd.h>
+
+                pid_t fork(void);
+
+                - returns 0 to the child
+
+                - returns PID of child to parent
+
+                - returns -1 on error
+
+            • See process.c for an example on how forl() and get(p)pid work:
+
+                - the child sees PID = 0 (no matter how many children there are)
+
+                - the parent always sees the PID of that child, and must use getpid() to see its own PID
