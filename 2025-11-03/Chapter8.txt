@@ -248,6 +248,55 @@ CHAPTER 8:  EXCEPTIONAL CONTROL FLOW
             • See figure 8.14 on page 763 for a visual of the anatomy of a process context switch.
 
 
+    III.  System Call Error Handling
+
+        • When Unix system-level functions encounter an error, they typically return -1 and set the global integer variable 'errno' to indicate what went wrong:  
+
+            if ((pid = fork()) < 0) {
+                fprintf(stderr, "fork error: %s\n", strerror(errno));
+                exit(0);
+            }
+            
+            - The strerror function returns a text string that describes the error associated with a particular value of 'errno'
+
+        • We can a define a helper function to help simplify our code:
+
+            void unix_error(char *msg) 
+            {
+                fprintf(stderr, "%s: %s\n", msg, strerror(errno));
+                exit(0);
+            }
+
+        • Using the helper funciton, our call to fork reduces from 4 lines to 2:
+
+            if ((pid = fork()) < 0)
+            unix_error("fork error");
+
+        • A wrapper function is just a normal function that calls another, but includes built-in error checking (and often error reporting).
+
+            - we can use the Fork() wrapper function below: 
+
+            pid_t Fork(void) {
+            pid_t pid;
+
+            if ((pid = fork()) < 0)
+                unix_error("Fork error");
+
+            return pid;
+            }
+
+            - given this wrapper, our call to fork shrinks to a single compact line:
+
+                pid=Fork();
+
+        • In all future discussion, wrapper functions will be referred to using thier capitalized notation, while the system-level functions will use lower case.
+
+
+        
+
+
+
+
 
 
 
