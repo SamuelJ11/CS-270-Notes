@@ -186,6 +186,33 @@ CHAPTER 8:  EXCEPTIONAL CONTROL FLOW
 
         E. Loading and Running Programs
 
+            • the execve() function loads and runs a new program in the context of the current process.
+
+                - "in the context of the new current process" means the process ID (PID) stays the same, but everything inside 
+                  (the code, stack, heap, data, etc.) is replaced by the new program’s code and data
+
+                  int execve(const char *filename, char *const argv[], char *const envp[]);
+
+                - the execve() function loads and runs the executable object file 'filename' with the argument list 'argv' and the environment variable list 'envp'
+
+                - called once and never returns, except if there is an error (-1)
+
+            • In the execve() function, the argv variable points to a null-terminated array of pointers, each of which points to an argument string.
+
+                - by convention, argv[0] is the name of the executable object file, and each entry points to a C string 
+
+                     argv → ┌────────────┐
+                            │   ─────────┼──► "ls\0"
+                            │   ─────────┼──► "-l\0"
+                            │   ─────────┼──► "/home/samuel\0"
+                            │   NULL     │
+                            └────────────┘
+
+                - 'envp' is a pointer to an array of strings. Each string represents one environment variable in your process
+
+                    -- each element in the array is a string of the form "name = value"
+
+
 
 
 
