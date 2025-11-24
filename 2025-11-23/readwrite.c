@@ -45,11 +45,7 @@ int main()
         case 1: 
         {        
             int fd = open("DONOTREAD.txt", O_WRONLY | O_CREAT | O_APPEND, DEF_MODE);
-            if (fd < 0) 
-            { 
-                perror("open"); exit(1); 
-            }
-
+            
             char buffer[1024];
             printf("Enter text to write: ");
             fgets(buffer, sizeof(buffer), stdin);
