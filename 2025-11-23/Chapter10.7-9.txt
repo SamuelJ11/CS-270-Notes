@@ -1,0 +1,53 @@
+CHAPTER 10:  System-Level I/O
+
+    VI. Reading File Metadata
+
+        • An application can retrieve information about a file (sometimes called the file’s metadata) by calling the stat() and fstat() functions.
+
+            - see metadata.c for a demonstration of the stat() function
+
+        • The stat() function takes as input a filename and fills in the members of a stat structure shown below:
+
+            struct stat {
+            dev_t     st_dev;           /* Device */
+            ino_t     st_ino;           /* Inode */
+            mode_t    st_mode;          /* Protection and file type */
+            nlink_t   st_nlink;         /* Number of hard links */
+            uid_t     st_uid;           /* User ID of owner */
+            gid_t     st_gid;           /* Group ID of owner */
+            dev_t     st_rdev;          /* Device type (if inode device) */
+            off_t     st_size;          /* Total size, in bytes */
+            unsigned long st_blksize;   /* Block size for filesystem I/O */
+            unsigned long st_blocks;    /* Number of blocks allocated */
+            time_t    st_atime;         /* Time of last access */
+            time_t    st_mtime;         /* Time of last modification */
+            time_t    st_ctime;         /* Time of last status change */
+            };
+
+        • A macro in C is just a chunk of code that gets expanded by the preprocessor before the compiler runs.
+
+        • A predicate is something that returns true or false.
+
+            - a macro predicate is a macro that evaluates to true or false
+
+        • The 'st_size' member contains the file size in bytes, and the 'st_mode' member encodes both the file permission bits and the file type.
+
+        • Linux defines macro predicates in <sys/stat.h> for determining the file type from the st_mode member (these are the same bitmasks used in
+          readwrite.c)
+
+            - S_ISREG(m) - is this a regular file?
+
+            - S_ISDIR(m) - is this a directory file?
+
+            - S_IRUSR(m) - does the owner (user) have read permission?
+
+            - S_IWUSR(m) - does the owner (user) have write permission?
+
+                -- *(m) is the st_mode field from struct stat
+
+    VII. Reading Directory Contents
+        
+        
+
+            
+         

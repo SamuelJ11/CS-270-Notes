@@ -28,7 +28,7 @@ CHAPTER 10:  System-Level I/O
         - for example, the standard I/O library provides no way to access file metadata such as file size or file creation time. Further, there are problems
           with the standard I/O library that make it risky to use for network programming
 
-    A. Unix I/O
+    I. Unix I/O
 
         • A linux file is a sequence of 'm' bytes:
 
@@ -75,7 +75,7 @@ CHAPTER 10:  System-Level I/O
         • When an application informs the kernel that a file is being closed, the kernel responds by freeing the data structures it created when the 
           file was opened and restores the fd to a pool of available file descriptors
 
-    B. Files 
+    II. Files 
 
         • Each linux file has a 'type' that indicates its role in the system:
 
@@ -101,7 +101,7 @@ CHAPTER 10:  System-Level I/O
 
         • Locations in the directory hierarchy are specified by absolute or relative pathnames
 
-    c. Opening and Closing Files
+    III. Opening and Closing Files
 
         • A process opens an existing file or creates a new file by calling the open function
 
@@ -155,7 +155,7 @@ CHAPTER 10:  System-Level I/O
 
         • A process closes an open file by calling the close() function with the fd as the argument.
 
-    D. Reading and Writing Files
+    IV. Reading and Writing Files
 
         • Applications perform input and output by calling the read() and write() functions
 
@@ -169,13 +169,3 @@ CHAPTER 10:  System-Level I/O
                 EOF is indicated by returning 0 next time
 
             (2) short read from a terminal: happens because terminal input is line-buffered, returns the number of bytes typed before pressing Enter
-
-    E. Robust Reading and Writing with the Rio Package
-
-        
-
-
-
-
-            
-        
