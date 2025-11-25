@@ -74,7 +74,9 @@ CHAPTER 10:  System-Level I/O
 
                 - readdir() uses this handle to know which directory to read and where it left off
 
-        • Each call to readdir returns a pointer to the next directory entry in the stream 'dirp', or NULL if there are no more entries
+        • Each call to readdir() returns a pointer to the next directory entry in the stream 'dirp', or NULL if there are no more entries
+
+            - importantly, readdir() sets the global variable errno to an error code (non-zero) if an error occured.
 
         • Each directory entry is a structure of the form shown below:
 

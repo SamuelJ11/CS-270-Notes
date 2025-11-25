@@ -7,8 +7,8 @@
 
 int main(int argc, char **argv)
 {
-    DIR *streamp;
-    struct dirent *dep;
+    DIR *streamp;           // pointer that will hold the handle
+    struct dirent *dep;     // pointer to the structure containing the entry data
 
     // Check if the directory name was provided
     if (argc < 2) 
@@ -20,14 +20,14 @@ int main(int argc, char **argv)
     // 2. Open the directory
     streamp = opendir(argv[1]);
 
-    if (streamp == NULL) 
+    if (streamp == NULL) // check to see if the opening failed
     {
         // Use perror to report the error from opendir
         perror("opendir error");
         exit(1);
     }
 
-    // 3. Reset errno before the loop (readdir might fail and set errno)
+    // 3. Not really necessary here but its a good habbit to get into
     errno = 0;
 
     // 4. Loop: Read directory entries one by one
