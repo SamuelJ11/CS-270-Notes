@@ -46,6 +46,50 @@ CHAPTER 10:  System-Level I/O
                 -- *(m) is the st_mode field from struct stat
 
     VII. Reading Directory Contents
+
+        • Applications can read the contents of a directory with the 'readdir' family of functions.
+
+        • The 'opendir()' function takes a pathname and returns a pointer to a directory stream. 
+        
+            - a stream is an abstraction for an ordered list of items, which in this case is a list of directory entries
+
+        • Consider the following declarations on page 928 as this shit is confusing asf:
+
+            DIR *opendir(const char *name);
+            Returns: pointer to handle if OK, NULL on error
+
+                - The function doesn't return the directory data itself; it returns a pointer to a structure called 'DIR'; this pointer is the directory stream handle
+
+                - the argument is the pathname of the directory you want to open
+
+            once you have the directory handle (DIR *dirp), you use readdir to read the contents:
+
+            struct dirent *readdir(DIR *dirp);
+            Returns: pointer to next directory entry if OK, NULL if no more entries or error
+
+                - This function returns a pointer to a struct 'dirent', and this is the structure that holds the specific information about a 
+                  single file or subdirectory within the opened directory
+
+                - the argument is the handle you received from the opendir() function
+
+                - readdir() uses this handle to know which directory to read and where it left off
+
+        • Each call to readdir returns a pointer to the next directory entry in the stream 'dirp', or NULL if there are no more entries
+
+        • Each directory entry is a structure of the form shown below:
+
+            struct dirent {
+            ino_t d_ino;        /* inode number */            
+            char d_name[256];   /* Filename */
+            };
+
+            - these are the only two members that are standard across all systems:
+            
+            - the 'd_name' member is the filename, and 'd_ino' is the file location
+
+        • The closedir() function takes the directory stream handle as its argument and closes the stream and frees up any of its resources.
+
+        • See 'directory.c' for a demonstration of how applications can read files in a directory
         
         
 

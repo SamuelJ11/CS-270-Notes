@@ -37,5 +37,6 @@ int main(int argc, char **argv)     // char** for array of strings
         writeok = "no";
 
     printf("type: %s, read permisson?: %s, write permission?: %s, size: %d bytes \n", type, readok, writeok, filesize);
+    
     return 0;
 }
