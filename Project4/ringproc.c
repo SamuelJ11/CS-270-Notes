@@ -1,4 +1,5 @@
 #include "ringofprocs.h"
+#include <string.h>
 
 volatile sig_atomic_t IAMLEADER = 0;
 volatile sig_atomic_t sig_received = 0;
@@ -21,14 +22,14 @@ void mysighandler(int signal)
 typedef void (*sighandler_t)(int);
 
 // create a wrapper function called Signal() that calls sigaction() for us
-sighandler_t Signal(int signum, sighandler_t handler)
+void Signal(int signum, sighandler_t handler)
 {
     struct sigaction new_action;
     new_action.sa_handler = handler;        // assigns the function pointer passed to the wrapper to the handler field
     sigfillset(&new_action.sa_mask);        // initializes the set to include every possible signal (all bits are 1)
     new_action.sa_flags = SA_RESTART;       // ensures interrupted slow syscalls like open(), read(), write(), etc restart automatically
 
-    if (sigaction(signum, &new_action) < 0)
+    if (sigaction(signum, &new_action, NULL) < 0)
     {
         unix_error("Signal error");
     }
