@@ -108,8 +108,8 @@ CHAPTER 8:  EXCEPTIONAL CONTROL FLOW
 
                 - line 1 defines a new type called 'sighandler_t': this new type is an alias for "a pointer to a function that takes an int and returns void"
 
-                    -- the set of parentheses immediately following the pointer name $\mathbf{(int)}$ is the crucial part. In C, if you have a variable declaration followed by 
-                       a set of parentheses containing arguments, the compiler knows this variable must be a pointer to a function: tt specifies the function's parameter list
+                    -- the set of parentheses immediately following the pointer name (int) is the crucial part. In C, if you have a variable declaration followed by 
+                       a set of parentheses containing arguments, the compiler knows this variable must be a pointer to a function: it specifies the function's parameter list
 
                     -- the type preceding the whole expression specifies what the function must return: (void)
 
@@ -370,7 +370,7 @@ CHAPTER 8:  EXCEPTIONAL CONTROL FLOW
               int sigaction(int signum, struct sigaction *act, struct sigaction *oldact)
 
             • the sigaction() function is unwieldly because it requires the user to set the entries of a complicated structure, so we can create a wrapper 
-              function called Signal() that calls sigaction() for use
+              function called Signal() that calls sigaction() for us
 
                 handler_t *Signal(int signum, handler_t *handler)
                 {

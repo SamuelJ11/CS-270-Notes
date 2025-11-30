@@ -1,18 +1,42 @@
 #include "ringofprocs.h"
 
-volatile IAMLEADER = 0;
+volatile sig_atomic_t IAMLEADER = 0;
 volatile sig_atomic_t sig_received = 0;
 int numcycles = -1;
 
-void mysighandler(int sig)
+// implement a function to report fatal system-level errors and exit
+void unix_error(char *msg)
+{
+    fprintf(stderr, "%s: %s\n", msg, strerror(errno));
+    exit(1);
+}
+
+// create the actual signal handler
+void mysighandler(int signal)
 {
     sig_received = 1;
 }
 
+// define a new type called 'sighandler_t': this new type is an alias for a pointer to a function that takes an int and returns void
+typedef void (*sighandler_t)(int);
+
+// create a wrapper function called Signal() that calls sigaction() for us
+sighandler_t Signal(int signum, sighandler_t handler)
+{
+    struct sigaction new_action;
+    new_action.sa_handler = handler;        // assigns the function pointer passed to the wrapper to the handler field
+    sigfillset(&new_action.sa_mask);        // initializes the set to include every possible signal (all bits are 1)
+    new_action.sa_flags = SA_RESTART;       // ensures interrupted slow syscalls like open(), read(), write(), etc restart automatically
+
+    if (sigaction(signum, &new_action) < 0)
+    {
+        unix_error("Signal error");
+    }
+}
+
 int main(int argc, char *argv[]) 
 {
-
-    // extract the filedescriptors from *pargv
+    // extract the file descriptors from *pargv
     int input_fd = atoi(argv[READFDARG]);
     int output_fd = atoi(argv[WRITEFDARG]);
     int ready_fd = atoi(argv[READYFDARG]);
@@ -35,15 +59,7 @@ int main(int argc, char *argv[])
     // install signal handler if I am the leader
     if (IAMLEADER == 1)
     {
-        struct sigaction act;
-        act.sa_handler = mysighandler;
-        act.sa_flags = 0;
-        sigemptyset(&act.sa_mask); // Don't block other signals while in the handler
-
-        if (sigaction(SIGUSR1, &act, NULL) == -1) 
-        {
-            perror("sigaction");
-            exit(1);
-        }
+        // install the handler
+        Signal(SIGUSR1, mysighandler);
     }       
 }
