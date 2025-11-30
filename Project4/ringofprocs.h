@@ -1,6 +1,3 @@
-#ifndef RINGOFPROCS_H
-#define RINGOFPROCS_H
-
 #include <stdio.h>  /* for printf(), fgets(), etc. */
 #include <unistd.h>  /* for pipe() and ... */
 #include <sys/types.h> /* for pid_t */
@@ -25,4 +22,3 @@
 void signal_ready(void);
 void report(int procnum, long value);
 
-#endif
