@@ -398,14 +398,175 @@ CHAPTER 8:  EXCEPTIONAL CONTROL FLOW
         
         F. Synchronizing Flows to Avoid Nasty Concurrency Bugs
 
+            • Race conditions happen because we can’t predict all the ways instructions from concurrent flows interleave, so we need synchronization to 
+              guarantee correctness.
 
+            • At first glance, the code on page 803 looks like fine, but upon deeper inspection we notice that it has a subtle flaw:
 
-
-
-            
+                (1) the parent executes the fork() function and the kernel schedules the newly created child to run instead of the parent
+                
+                (2) before the parent is able to run again, the child terminates and becomes a zombie, causing the kernel to deliver a SIGCHLD signal to the parent
+                
+                (3) later, when the parent becomes runnable again but before it is executed, the kernel notices the pending SIGCHLD and causes it to be received by 
+                    running the signal handler in the parent
                     
+                (4) the signal handler reaps the terminated child and calls deletejob(), which does nothing because the parent has not added the child to the list yet
+                    
+                (5) after the handler completes, the kernel then runs the parent, which returns from fork and incorrectly adds the (nonexistent) child to the job list by 
+                    calling addjob()
 
-            
-            
+                * crucially, adding and deleting jobs happen atomically and safely without interference from signals that might arrive at the same time, preventing 
+                  obvious race conditions, but more subtle race condtions are still present
 
+            • There are also interleavings where events occur in the correct order:
             
+                - if the kernel happens to schedule the parent to run when the fork call returns instead of the child, then the parent will correctly add
+                  the child to the job list before the child terminates and the signal handler removes the job from the list
+
+            • Thus, for some interleavings of the parent’s main routine and signal-handling flows, it is possible for deletejob() to be called before addjob().
+
+                - for this race condtion, if addjob() wins the race, then the answer is correct, but if deletejob() wins, the answer is incorrect
+
+            • Such errors are enormously difficult to debug because it is often impossible to test every interleaving.
+
+            • Figure 8.40 on page 805 shows one way to eliminate this race condition, copied below:
+
+                void handler(int sig)
+                {
+                    int olderrno = errno;
+                    sigset_t mask_all, prev_all;
+                    pid_t pid;
+
+                    Sigfillset(&mask_all);
+
+                    while ((pid = waitpid(-1, NULL, 0)) > 0) { 
+                        Sigprocmask(SIG_BLOCK, &mask_all, &prev_all);
+                        deletejob(pid);                     
+                        Sigprocmask(SIG_SETMASK, &prev_all, NULL);
+                    }
+
+                    if (errno != ECHILD)
+                        Sio_error("waitpid error");
+
+                    errno = olderrno;
+                }
+
+                int main(int argc, char **argv)
+                {
+                    int pid;
+                    sigset_t mask_all, mask_one, prev_one;
+
+                    Sigfillset(&mask_all);
+                    Sigemptyset(&mask_one);
+                    Sigaddset(&mask_one, SIGCHLD);
+
+                    Signal(SIGCHLD, handler);
+                    initjobs();                           
+
+                    while (1) {
+
+                        Sigprocmask(SIG_BLOCK, &mask_one, &prev_one);   /* Block SIGCHLD before the call to fork() */
+
+                        if ((pid = Fork()) == 0) {          
+                            Sigprocmask(SIG_SETMASK, &prev_one, NULL);  /* Unblock SIGCHLD only after the call to fork()*/
+                            Execve("/bin/date", argv, NULL);
+                        }
+
+                        Sigprocmask(SIG_BLOCK, &mask_all, NULL);        
+                        addjob(pid);                        
+                        Sigprocmask(SIG_SETMASK, &prev_one, NULL);      
+                    }
+
+                    exit(0);
+                }
+
+                - nothing changes in the handler, but in main we add an additional set of blocking and unblocking:
+
+                    (1) block all signals before the call to fork(): this ensures the parent cannot receive a SIGCHLD between the fork() and the addjob() call,
+                        preventing deletejob() from being called before addjob()
+
+                    (2) only unblock the signals after the parent has created the child: this ensures SIGCHLD is only delivered after the parent has 
+                        added the job to the list, so the handler sees an entry it can safely delete
+
+                    (3) also, remember that that children inherit the blocked set of their parents, so we must be careful to unblock the SIGCHLD signal in the child 
+                        before calling execve()
+                        
+                        if SIGCHLD is blocked before the child becomes a new parent after execve(), any children that new program creates will 
+                        send SIGCHLD to their parent (the exec’d program), but since SIGCHLD is blocked in that parent, it will never handle those signals
+
+                        this means its own children become zombies forever because that that program never reaps them
+
+        G. Explicitely Waiting for Signals
+
+            • Sometimes a main program needs to explicitly wait for a certain signal handler to run. 
+            
+                - for example, when a Linux shell creates a foreground job, it must wait for the job to terminate and be reaped by the SIGCHLD handler 
+                  before accepting the next user command
+
+            • Reference the code in figure 8.41 on page 806 to understand the discussion below:
+
+                (1) the parent installs handlers for SIGINT and SIGCHLD and then enters an infinite loop. 
+                
+                (2) it blocks SIGCHLD to avoid the race between the parent and child that we observed in figure 8.39
+
+                (3) after creating the child, it resets the global flag 'volatile sig_atomic_t pid' to zero, unblocks SIGCHLD, and then waits in a 
+                    spin loop for 'pid'to become non-zero (waits for the signal handler to set the flag (aka reap the children))
+
+                (4) this terminates the spin loop, and the parent continues with additional work before starting the next iteration
+
+            • While this codeis correct, the spin loop is wasteful because the CPU burns cycles doing:
+
+                pid? pid? pid? pid? pid? pid?
+
+            • You might be tempted to think that instead of looping and wasting CPU, we can put the process to sleep via the pause() funciton until 
+              something happens
+
+                while (!pid)
+                pause();
+
+                - but this actually introduces a race condition where a SIGCHLD signal can be received after the while-loop test but before the pause, causing
+                  the program to hang indefinitely
+
+            • Another option is to replace the pause with sleep:
+
+                while (!pid) 
+                sleep(1);
+
+                - the problem with this approach is that it is simply too slow: 1 second is an ETERNITY relative to the CPU executing BILLIONS of instructions
+                  per second
+
+                - Why not just pick a “good enough” number?
+
+                    -- too small means high CPU usage (wasteful)
+
+                    -- too large means slow response (lags)
+
+                    -- There is no “perfect” number that is both fast and efficient
+
+            • The proper solution is to use sigsuspend():
+
+                int sigsuspend(const sigset_t *mask);
+
+            • sigsuspend() does three things:
+                
+                (1) temporarily replaces the current blocked set with the mask you provide (unblocks SIGCHLD in this case)
+
+                (2) suspends the process until a signal arrives whose action is either to run a handler or terminate the process
+
+                    - if the action is to terminate, then the process terminates without returning from sigsuspend()
+
+                (3) after the handler runs, sigsuspend() returns AFTER THE HANDLER RETURNS (thus achieving the goal of waiting for the signal handler) and 
+                    restores the old blocked set automatically
+
+                * see figure 8.42 on page 808 to see the final solution that utilizes sigsuspend(&prev)
+
+            • The sigsuspend() function is equivalent to an atomic (uninterruptible) version of the following:
+
+                sigprocmask(SIG_BLOCK,&mask,&prev);
+                pause();
+                sigprocmask(SIG_SETMASK,&prev,NULL);
+
+                - since the above code requires three instructions, it is NOT atomic and thus interruptable (i.e. vulnerable to race conditions)
+
+                - sigsupsend() does the above 3 instructions in one single atomic instruction, so it is uninterruptable and thus completely avoids
+                  race conditions
