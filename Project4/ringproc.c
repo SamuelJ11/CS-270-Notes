@@ -67,7 +67,6 @@ int main(int argc, char *argv[])
 
     // STEP 5: WAIT FOR SIGURS1 TO BE DELIVERED, PROMPT USER FOR CYCLE VALUE
 
-    char* value = NULL;
     if (IAMLEADER)
     {
         sigset_t mymask, mtmask, oldmask;
@@ -79,9 +78,7 @@ int main(int argc, char *argv[])
 
         while (sig_received == 0)
         {
-            // unblock signals and pause this thread
             sigsuspend(&mtmask); 
-            /* signal arrived - restore previous signal mask */
             if (sigprocmask(SIG_SETMASK, &oldmask, NULL) < 0)
             {
                 unix_error("sigprocmask error: ");
@@ -89,13 +86,13 @@ int main(int argc, char *argv[])
         }
 
         printf("Please enter an integer in [1,9999] to circulate: ");
-        value = fgets(buf, sizeof(buf), stdin);
-        if (value == NULL)
+        fgets(buf, sizeof(buf), stdin);
+        if (buf[0] == '\n')
         {
-            printf("no input recieved, exiting.\n");
+            printf("Warning: no input recieved for cycle value, exiting.\n");
             exit(0);
         }
-        cycle_value = atoi(value);
+        cycle_value = atoi(buf);
     }
 
     // STEP 6: WHILE LOOPING, READ A LONG FROM THE INPUT PIPE FILE DESCRIPTOR
@@ -104,21 +101,20 @@ int main(int argc, char *argv[])
     long check;
     if (IAMLEADER) 
     {
-        write(output_fd, &cycle_value, sizeof(long));  // start the ring
+        write(output_fd, &cycle_value, sizeof(long));
     }
 
     while(1)
     {
-        // increment the value read from the predecessor 
         check = read(input_fd, &cycle_value, sizeof(long));    
         if (check == 0)
         {
             close(output_fd);
             exit(0);
         }
-        // report my value and that it was received
-        report(myIndex, cycle_value);
 
+        report(myIndex, cycle_value);
+        
         if (IAMLEADER)
         {
             cycle_iterator++;
@@ -132,6 +128,4 @@ int main(int argc, char *argv[])
         cycle_value++;
         write(output_fd, &cycle_value, sizeof(long));
     }
-
-    return 0;
 }
