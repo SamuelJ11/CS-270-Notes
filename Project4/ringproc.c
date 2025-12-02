@@ -3,23 +3,24 @@
 
 volatile sig_atomic_t IAMLEADER = 0;
 volatile sig_atomic_t sig_received = 0;
-int numcycles = -1;
-long cycle_value = 0;
-char buf[5];
 
+// create a type alias named sighandler_t to simplify call to Signal()
+typedef void (*sighandler_t)(int);
+
+// wrapper function for reporting system errors
 void unix_error(char *msg)
 {
     fprintf(stderr, "%s: %s\n", msg, strerror(errno));
     exit(1);
 }
 
+// simple atomic signal handler
 void mysighandler(int signal)
 {
     sig_received = 1;
 }
 
-typedef void (*sighandler_t)(int);
-
+// implement a wrapper function called Signal() that handles the unwiedly sigaction() function call
 void Signal(int signum, sighandler_t handler)
 {
     struct sigaction new_action;
@@ -29,12 +30,14 @@ void Signal(int signum, sighandler_t handler)
 
     if (sigaction(signum, &new_action, NULL) < 0)
     {
-        unix_error("Signal error");
+        unix_error("sigaction error");
     }
 }
 
 int main(int argc, char *argv[]) 
 {
+    long numcycles = 0, cycle_value = 0;
+
     // STEP 1: EXTRACT THE FILE DESCRIPTORS FROM *PARGV
 
     int input_fd = atoi(argv[READFDARG]);
@@ -52,7 +55,7 @@ int main(int argc, char *argv[])
     {
         IAMLEADER = 1;             
         numcycles = atoi(numcycles_env); 
-
+        // installing the handler is simple now - Signal() handles error checking
         Signal(SIGUSR1, mysighandler);
     } 
     else 
@@ -69,19 +72,29 @@ int main(int argc, char *argv[])
 
     if (IAMLEADER)
     {
+        char buf[5];    // 4-character buffer for cycle_value (plus 1 for null-terminator)        
         sigset_t mymask, mtmask, oldmask;
         sigfillset(&mymask); sigemptyset(&mtmask);
+
+        // block all signals in mymask, and save the previously blocked signals in oldmask
         if (sigprocmask(SIG_BLOCK, &mymask, &oldmask) < 0)
         {
-            unix_error("sigprocmask error: ");
+            unix_error("sigprocmask error");
         }
 
         while (sig_received == 0)
         {
+            /*  sigsuspend() does 3 things here:
+                (1) temporarily replaces the current blocked set with the provided "mt" set of blocked signals 
+                (2) suspends the process until a signal arrives whose action is either to run a handler or terminate the process
+                (3) returns AFTER THE HANDLER RETURNS and restores the old blocked set (mymask) automatically
+            */
             sigsuspend(&mtmask); 
+
+            // restore previously blocked signals stored in oldmask
             if (sigprocmask(SIG_SETMASK, &oldmask, NULL) < 0)
             {
-                unix_error("sigprocmask error: ");
+                unix_error("sigprocmask error");
             }
         }
 
@@ -97,8 +110,9 @@ int main(int argc, char *argv[])
 
     // STEP 6: WHILE LOOPING, READ A LONG FROM THE INPUT PIPE FILE DESCRIPTOR
 
-    long cycle_iterator = 0;
-    long check;
+    long cycle_iterator = 0, inputpipe_open = 0;
+
+    // this code starts the ring
     if (IAMLEADER) 
     {
         write(output_fd, &cycle_value, sizeof(long));
@@ -106,13 +120,16 @@ int main(int argc, char *argv[])
 
     while(1)
     {
-        check = read(input_fd, &cycle_value, sizeof(long));    
-        if (check == 0)
+        inputpipe_open = read(input_fd, &cycle_value, sizeof(long)); 
+
+        // if predecessor has closed its write end of the pipe, close output pipe and exit   
+        if (inputpipe_open == 0)
         {
             close(output_fd);
             exit(0);
         }
 
+        // report current process's index and received value
         report(myIndex, cycle_value);
         
         if (IAMLEADER)
@@ -126,6 +143,8 @@ int main(int argc, char *argv[])
         }
 
         cycle_value++;
+
+        // write the value of the incremented cycle_value to successor in the ring
         write(output_fd, &cycle_value, sizeof(long));
     }
 }
