@@ -238,7 +238,7 @@ CHAPTER 9:  Virtual Memory
 
                 (1) Break Down the Virtual Address
 
-                    -- convert the 14-bit virtual address to binary: 00 1111 010100
+                    -- convert the 14-bit virtual address to binary: 00 0011 1101 0100
 
                     -- split this binary string into the VPN and VPO: 
 
@@ -251,16 +251,16 @@ CHAPTER 9:  Virtual Memory
 
                     - here the MMU first checks the TLB to see if we have cached this page (0x0F) recently
 
-                    - to look into the TLB, we have to slit the VPN further based on the rules from the text
+                    - to look into the TLB, we have to split the VPN further based on the rules from the text
 
                         -- TLB Index is the lower 2 bits of the VPN: 11 (TLBI = 3)
 
-                        -- TLB Tag is the remaining upper 6 bits of the VPN: 000011 (TLBT = 0x03)
+                        -- TLB Tag is the remaining upper 6 bits of the VPN: 00 0011 (TLBT = 0x03)
 
                     - now look at figure 9.20(a):
 
                         (1) go to set 3
-                        (2) scan the tags in that row for tag 03
+                        (2) scan the tags in that row for tag 0x03
                         (3) check the valid bit, since its 1 we have a hit
                         (4) read the PPN value in this entry: PPN = 0x0D
 
