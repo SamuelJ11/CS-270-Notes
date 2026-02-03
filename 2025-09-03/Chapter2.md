@@ -1,0 +1,259 @@
+# CHAPTER 2:  REPRESENTING AND MANIPULATING INFORMATION
+
+##  Information Storage
+
+### Hexadecimal Notation
+
+    • The value of a single byte can range from 00₁₆ to FF₁₆ 
+
+    • Numeric constants starting with 0x are interpreted as hexadecimal.
+
+    • To easily remember how to convert from decimal to hexadecimal, use the formula x₁₀ = 16.q + r.  Use this formula until q = 0, then starting from the first remainder string together all remembers from right to left in the hexidecimal number:
+
+        - example:  740₁₀ = (16 * 46) + 4
+                    46₁₀ = (16 * 2) + 14
+                    2₁₀ = (16 * 0) + 2
+
+                    answer:  0x2E4
+
+    • To easily convert a hexadecimal number to decimal, simply multiply each hexadecimal degit by the appropriate power or 16:
+
+        - example:  0x2E4 = (16⁰ * 4) + (16¹ * 14) + (16² * 2) = 740
+
+### Data Sizes
+
+    • For a machine with a w-bit word size, the virtual addresses can range from 0 to 2ʷ - 1, giving the program access to 2ʷ bytes.
+
+    * See figure 2.3 on page 69 for the number of bytes typically allocated for different C data types
+
+    • Programmers should strive to make their programs portable across different machines and compilers.
+
+        - one aspect of portability is to make the program insensitive to the exact sizes of the different data types:
+
+            -- pointer size = word size, so on 64-bit machines, pointers are 64 bits.
+
+            -- int is only 32 bits, so when migrating a program designed on a 32-bit machine to a 64-bit machine, the 64-bit pointer is 
+                truncated into a 32-bit int, causing bugs.
+
+### Addressing and Byte Ordering
+
+    • The address of a variable always points to the first (lowest) byte of that variable:
+
+        - example:  if a variable 'x' has an address of 0x100 (value of &x = 0x100), then the 4 bytes of x would be stored in memory locations 0x100, 0x101, 0x102, and 0x103.
+
+    • Some machines choose to store the object in memory from least signficant byte to most (little endian) while others choose to store them from most significant byte to least (big endian).
+
+    • In C, the smallest addressable unit of memory is a byte.
+
+    * Try running bytes.c to see examples of byte representations for different data types.
+
+        - the least significant byte value of 0x39 is printed first (little endian)
+
+### Representing Strings
+
+    • A string in C is encoded (ASC II) by an array of characters terminated by the null "\0".
+
+        - if the show_bytes routing is run with the arguments "12345" and 6 (to include the terminating character), we get the result 31 32 33 34 35 00, 
+            with the 00 denoting the null character at the end of the string.
+
+### Representing Code 
+
+    • Different machine types use different and incompatible instructions and encodings - binary code is seldom portable across different combinations of machine and operating systems.
+
+### Introduction to Boolean Algebra
+
+    • The four basic bitwise operators are:
+
+        - AND (&)
+        - OR (|)
+        - XOR (^)
+        - NOT (~)
+
+    • We can extend the four Boolean operations to also operate on bit vectors, strings of zeros and ones of some fixed length 'w'.
+
+        - one useful application of bit vectors is to represent finite sets: 
+
+            -- example:  assume A = {0, 3, 5, 6} and w = 8 (one byte), so our bit vector takes the form [Aw₋₁, Aw₋₂ . . . 1, 0]
+
+                let i = index of the bit vector, then Aᵢ = 1 in our bit vector if i ∈ A.
+
+                thus our bit vector encoding of A would be [01101001]
+
+### Bit-level Operations in C 
+
+    * See swap.c for an example of swapping two integer values using bitwise operations on pointer values.
+
+    • A common use of bit-level operations is to implement 'masking' operations, where a mask is a bit pattern tht indicates a selected set of bits within a word.
+
+        -- the mask 0xFF indicates the low-order byte of a word (when &'d with a number such as 0x89ABCDEF, this would yield 
+            0x000000EF)
+
+### Logical Operations in C
+
+    • C provides a set of logical operators:
+
+        - (OR) ||
+        - (AND) &&
+        - (NOT) !
+
+    • Logical operations treat any non-zero argument as representing TRUE and any zero argument as FALSE, returning either 1 or 0 respectively.
+
+        - example:  0x69 || 0x55 = 0x01 (TRUE)
+
+### Shift Operations in C 
+
+    • C also provides a set of shift operations for shifting bit patterns to the left and to the right.
+
+        - example:  let k = 2 and the operand x = 00101101 (45).
+
+            for an operand having a bit representation [xw₋₁, xw₋₂ . . . 1, 0], the expression x << k would shift each bit of x to the left by 2, and the rightmost positions get filled by zeroes:
+
+            --  x = 10110100 (180)
+
+            notice that left-shifting by n bits effectively multiplies the original value by 2ⁿ.  Hence 45 was multiplied by 2² to obtain 180.
+
+        - There are 2 forms of right-shifting:
+
+            -- logical:  a logical right shift fills the left end with k zeroes, giving a result [0, 0, . . . xw₋₁, xw₋₂ . . . xₖ]
+
+            -- arithmetic:  an arithmetic right shift fill the left end with k repetitions of the most significant bit, giving a result [xw₋₁, xw₋₁, xw₋₁, . . . xₖ]                    
+        
+    • For signed numbers, arithmetic right shift must be used, and for unsigned numbers, logical right shift must be used.
+
+## Integer Representations
+
+### Integral Data types
+
+    • The ranges of integral data types (ones that represent finite ranges of integers) are not symmetric:  the range of negative numbers extends one further than that of positive numbers:
+
+        - [signed] char: −128 to 127
+        - unsigned char: 0 to 255
+        - short: −32,768 to 32,767
+        - unsigned short: 0 to 65,535
+        - int: −2,147,483,648 to 2,147,483,647
+        - unsigned int: 0 to 4,294,967,295
+        - long: −2,147,483,648 to 2,147,483,647
+        - unsigned long: 0 to 4,294,967,295
+        - int32_t: −2,147,483,648 to 2,147,483,647
+        - uint32_t: 0 to 4,294,967,295
+        - int64_t: −9,223,372,036,854,775,808 to 9,223,372,036,854,775,807
+        - uint64_t: 0 to 18,446,744,073,709,551,615
+
+    • Note that the above ranges are the 'typical' ranges, not the 'guaranteed' ranges (see textbook page 91 for more information on this).
+
+### Unsigned Encodings 
+
+    • The binary to unsigned encoding (B2Uw), where w = # of bits of the binary number, is defined as:
+
+        - Σ (from i = 0 to w-1)  xᵢ(2ⁱ)
+
+### Two's Complement Encodings
+
+    • The most common representation of signed numbers is two's complement.  The binary to two's complement encoding is defined as:
+
+        - −(xw₋₁).(2ʷ⁻¹) + Σ (from i = 0 to w-2)  xᵢ(2ⁱ)        *or you could just negate all bits and add 1.  be careful to ONLY do this if the MSB = 1; you don't need to do this for positive numbers.
+
+    • Two’s-complement ranges are asymmetric because half of the bit patterns (with sign bit = 1) represent negative numbers, while the other half (sign bit = 0) represent nonnegative numbers.
+    
+        - since zero is considered nonnegative, there is one fewer positive number than negative
+
+        - the maximum unsigned value is slightly more than twice the maximum two’s-complement value: UMax = (2 * TMax) + 1
+
+    * See encodings.c to get a better understanding of the two's complement representation
+
+### Conversions Between Signed and Unsigned
+
+    • When casting between different numeric data types, the bit represenation stays the same, but they are interpreted differently (see encodings.c for an illustration of this).
+
+### Signed Versus Unsigned in C 
+
+    • Generally, most numbers are signed by default unless either declared with (unsigned) or by including the 'u' or 'U' suffix to the constant.
+
+    • As a general rule for casting unsigned to signed (w-bit) numbers, we can observe the following:
+
+        - signed value = unsigned value (if MSB = 0)
+        - signed value = unsigned value - 2ʷ (if MSB = 1)
+
+    • As a general rule for casting signed to unsigned (w-bit) numbers, we can observe the following:
+
+        - unsigned value = signed value (if signed value >= 0)
+        - unsigned value = signed value + 2ʷ (if signed value < 0)
+
+    • To convert an unsigned number to a larger datatype, we can simply add leading zeros to the representation (known as zero extension).
+
+    • To convert a two’s-complement number to a larger datatype, the rule is to perform a sign extension, adding copies of the most significant bit to the representation.
+
+        - example:  1101 0110 (-42) becomes sign-extended to 1111 1111 1101 0110
+
+    * See encodings.c for an example of sign extension.
+
+### Truncating numbers
+
+    • When truncating an unsigned w-bit number to a k-bit number, we drop the high-order (w - k) bits and apply the following rule to obtain a truncated version of x (x'):
+
+        - let x = [xw₋₁, xw₋₂ . . . x₀​] 
+
+        - let x' = [xₖ₋₁, xₖ₋₂, . . . x₀]
+
+        - let y = B2U(x)    *B2U = binary-to-unsigned integer
+        
+        - then y' = y mod 2ᵏ
+
+            -- example:  x = 11010011 and k = 4 (we are truncating x to 4 bits)
+
+                            x' = 0011
+                            y = B2U(x) = 211
+                            y' = 211 % 2⁴ = 3
+
+        *an easier way is to simply remove the leading k bits from x and interpret x' as an unsigned integer
+
+    • When truncating a two's complement w-bit number to a k-bit number, we drop the high-order (w - k) bits and apply the following rule to obtain a truncated version of x (x'):
+
+        - let x = [xw₋₁, xw₋₂ . . . x₀​] 
+
+        - let x' = [xₖ₋₁, xₖ₋₂, . . . x₀]
+
+        - let y = B2T(x)    *B2T = binary-to-signed integer
+        
+        - then y' = y % 2ᵏ
+
+            -- example:  x = 11011011 and k = 4 (we are truncating x to 4 bits)
+                                
+                            x' = 1011
+                            y = B2T(x) = -37
+                            y' = -37 % 2⁴ = -5
+
+        *an easier way is to simply remove the leading k bits from x and interpret x' as a signed integer
+
+    • In encodings.c, the truncation process went as followed:
+
+        - x = 0000 0000 0000 0000 1100 1111 1100 0111 (53191) and k = 16
+
+        - x' = 1100 1111 1100 0111
+        
+        - y = BTU(x) = 1111 1111 1111 1111 1100 1111 1100 0111
+
+        - y' = y % 2¹⁶ = 1100 1111 1100 0111 (-12345)
+
+            
+
+
+                                 
+
+
+            
+
+
+
+
+
+
+
+            
+
+             
+
+                    
+                    
+            
+                                

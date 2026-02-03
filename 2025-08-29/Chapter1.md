@@ -1,0 +1,238 @@
+# CHAPTER 1:  A TOUR OF COMPUTER SYSTEMS
+
+## Information is Bits + Context
+
+  • Characters are represented in 8-bit chunchs called bytes, according to the ACSI II standard.
+
+  • The hello.c program is stored in a file as a sequence of bytes, which have an integer value that corresponds to some character --> files containing exclusively ACSI II characters are called text files
+
+  • All statements are terminated by the invisible newline character '\n'
+
+## Programs are Translated by other Programs into Different Forms
+
+  • In order to run the hello.c program, the statements must be translated by other programs into low-level machine level instructions, which are then packaged into an executable object program and stored as a binary disk file --> this is performed by a compiler driver:
+
+  • The gcc compiler reads the source file hello.c and translates it into 
+    an executalbe object file (done in four phases):
+
+      - Preprocessing phase:  the preprocessor (cpp) modifies the original C program accoriding to directives that begin with the '#' character, i.e. #include <stdio.h> command tells the preprocessor to read the contents of the system header file with stdio.h and insert it directly into the program text.  This results in another C program with the .i suffix            
+      
+      - Compilation phase:  the compiler (cc1) translates the text file hello.i into a the text file hello.s, which contains an assembly-language program
+
+      - Assembly phase:  the assembler translates hello.s into machine-language instructions, packages them in a form known as a relocatable object program, and stores the result in a object file hello.o
+
+      - Linking phase:  the printf function is part of the standard C library, which resides in a seperate precompiled object file called printf.o, which must be merged with our hello.o program
+      
+        -- the linker handles this merging, which results in the hello file (executable)          
+
+## It Pays to Understand How Compilation Systems Work
+
+  • There are important reasons why we should understand how compilation systems work:
+
+    - Optimizing program performance
+    - Understanding link-time errors
+    - Avoiding security holes
+   
+## Processors Read and Interpret Instructions Stored in Memory
+
+  • To run the executable file on a Unix system, we type its name to an application program known as a shell:
+
+      - @SamuelJ11/workspaces/CS-270-Notes/2025-09-03 (main) $ ./hello.c
+
+  • The shell is a command-line interpreter that prints a prompt, wiat for you to type a command line, and then performs the command:
+
+      - if the first word of the command line does not correspond to a built in shell command, then the shell assumes that its the name of an executable file that it should load and run.
+
+### Hardware Organization of a System
+
+  • To understand what happends to our hello program when we run it, we need to understand the hardware organization of a typical system
+
+    - Buses:  these are electrical conduits that carry fixed-sized chuncks of bytes of information back and forth between components, and these chuncks are called words.
+
+              -- the number of bytes in a word is a fundamental system parameter that varies across systems.
+              -- Most machines today have word sizes of 8 bytes (64 bits)
+
+    - I/O Devices:  these are the system's connection to the outside world.  Each I/O device is conected to the I/O bus by either a controller (chip sets in the device itself or on the system's motherboard) or an adapter (cards that plug into a slot on the motherboard)   
+
+    - Main Memory:  this is a temporary storage device that holds both a program and the data it manipulates while the processor is executing the program (consists of a collection of dynamic random access memory (DRAM) chips).
+
+                    -- logically, memory is organized as a linear array of bytes, each with its own unique address (array index) starting at zero.
+
+    - Processor:  the central processing unit is the engine that interprets instructions stored in main memory.  At its core is a 
+                  word-size storage device (or register) called the program counter (PC).
+
+                  -- at any point in time, the PC points at (contains the address of) some machine-language instruction in main memory.
+
+                  -- the processor reads the instruction from memory pointed at by the PC, interprets bits in the instruction, performs the required operation, and then updates the PC to point to the next instruction (which may not be contiguous in memory to the instruction that was just executed)
+
+                  -- there are only a few of these simple operations (listed below), and they revolve around main memory, the register file (a small storage device that consists of a collection of word-size registers, each with its own unique name) and the arithmetic logic unit (ALU).
+
+                      • Load:  copy a byte or word from main memory into a register, overwriting the previous contents of the register.
+
+                      • Store:  copy a byte or word from a register to a location in main memory, overwriting the previous contents of that location.
+
+                      • Operate: copy the contents of two registers to the ALU, perform an arithmetic operation on the two words, and store the result in a register, overwriting the previous contents of that trigger.
+                      
+                      • Jump:  extract a word from the instruction itself and copy that word into the PC, overwirting the previous value of the PC.
+
+### Running the hello Program  
+
+  • Now we can begin to understand what happens when we run our hello.c program.
+
+    1. As we type the characters ./hello, the shell program reads each one into a register and then stores it in memory.
+
+    2. When we hit enter, the shell loads the executable "hello" file by executing a sequence of instructions that copies the code and data in the object file from disk to main memory.
+
+    3. Using a technique known as direct memory access (DMA) the data travels directly from disk to main memory without passing through the processor.
+
+    4. Once the code and data are loaded into memory, the processor begins executing the machine-language instructions in the program's main() function.  These instructions copy the bytes in the "hello, world\n" string from memory to the register file, and from there to the display device.
+
+## Caches Matter
+
+  • A system spends a lot of time simply moving information from one place to another - thus a major goal for system designers is to make these copy operations run as fast as possible.
+
+  • A disk drive on a typical system might be 1000 times larger than main memory, but it might take the processor 10,000,000 times longer to read a word from disk than from memory.
+
+    - similarly, a typical register file stores only a few hundred bytes of information, but the processor can read data from the register file almost 100 times faster than from memory.
+
+  • As semiconductor technology progresses, the processor-memory gap continues to increase - it is easier and cheaper to make processors run faster than it is to make main memory run faster - to deal with this, system designers include smaller, faster storage devices called caches.
+
+  • Caches serve as a temporary staging area for information that the processor is likely to need in the near future.
+
+    - L1 caches on the processor chip hold tens of thousands of bytes and can be accessed nearly as fast as the register file.
+    
+    - L2 caches store hundreds of thousands to millions of bytes and is connected to the processor by a special bus.  
+
+  • The L1 and L2 caches are implemented with a hardware technology known as 'static random access memory' (SRAM).
+
+## Storage Devices Form a Hierarchy
+
+  • Storage devices in every computer system are organized as a memory hierarchy, with the register file occupying the top level in the hierarchy (level 0 or L0).
+
+  • Storage at one level serves as a cache for storage at the next lower level (i.e. the register file is a cache for the L1 cache).
+
+    - register file --> L1 cache --> L2 cache --> L3 cache --> main memory --> local secondary storage --> remote secondary storage
+
+## The Operating System Manages the Hardware
+    
+  • When the shell loaded and ran the hello program, and when the hello program printed its message, neither program accessed the keyboard, display, disk, or main memory directly - this was the role of the operating system
+
+    - The operating system is like a layer of software interposed between the application program and the hardware: applications --> operating system --> hardware
+  
+    • The operating system has two primary purposes:  (1) to protect the hardware from misuse by runaway applications and (2) to provide applications with simple and uniform mechanism for interacting with low-level hardware devices.
+
+      - the OS achieves both goals via processes, virtual memory and files.
+
+### Processes
+
+  • A process is the operating system's abstraction for running a program.  
+
+    - on a system with one CPU, multiple processes take turns using the CPU (i.e process A runs for a short time, then is paused --> rocess B runs for a short time, then is paused.  The CPU switches back and forth so quickly that it looks like both are running at the same time.)
+
+    - this interleaving of instructions is handled by the OS.
+
+  • The OS keeps track of all the state information that the process needs in order to run, known as the 'context'.
+
+    - the context includes information such as the current values of the PC, the register file, and the contents of main memory
+
+    - when the operating system decides to transfer control from the current process ot some new process, it performs a 'context switch' by saving the context of the current process, restoring the context of the new process, and then passing control to the new process.
+
+  • Using the hello.c program as an example:
+  
+    - (1) the shell process is running alone, waiting for user input.
+    
+    - (2) when we ask it to run the hello program, the shell program carries out our request by invoking a special function known as a 'system call' that passes control to the operating system.
+
+    - (3) the operating system saves the shell's context, creates a new hello process and its context, and passes control to the new hello process.
+
+    - (4) after hello terminates, the OS restores the context of the shell process and passes control back to it.
+
+  •  The transition from one process to another is managed by the operating system 'kernel' (the portion of the OS code that is always resident in memory, i.e it is loaded into RAM and never swapped out.)
+
+      - the kernel is not a separate process, but a collection of code and data structures that the OS uses to manage all the processes.
+
+### Threads
+
+  • In modern systems a process can consist of multiple execution units called 'threads', each running in the context of the process and sharing the same code and global data.
+
+    - think of a process as a book, and each thread as a finger pointing to a page.  
+
+    - all fingers are in the same book (same code and data).
+    
+    - but each finger can be on a different page (different execution point)
+
+  • Threads allow a process to do multiple things at once, while still sharing the same memory.
+       
+### Virtual Memory
+
+  • Virtual memory is an abstraction provided by the operating system (it makes each process think it has its own exclusive main memory, even though physical RAM is shared among many processes.)
+
+  • Each process sees a continuous, uniform memory space called a 'virtual address space'.
+
+  • The virutal address space is divided into regions, each with a specific purpose:
+
+    - program code and data (lowest addresses):  initialized directly from the contents of an executable file, and has a fixed size once the program starts.
+
+    - heap:  following the code and data areas, the heap expands and contracts dynamically at run time as a result of calls to standard library routines such as 'malloc' and 'free'
+
+    - shared libraries (middle of address space):  stores the code and data for shared libraries (i.e. standard C library and math library)
+
+    - stack (top of USER'S virtual address space):  the user stack is used by the compiler to implement function calls - expands and contracts dynamically 
+                                                    (each time we call a function, the stack grows, each time we return from a function it contracts.)    
+
+    - kernel virtual memory (top of virtual address space):  application programs do not have read or write permissions to this area and cannot directly call functions 
+                                                              defined in the kernel code (the process must call the kernel via a system call)
+
+### Files
+
+  • A file is simply a sequence of bytes - every I/O device (even networks) are modeled as a file.
+
+    - all input and output in the system is performed by reading and writing files using a small set of system calls known as 'Unix I/O'.
+        
+## Systems Communicate with Other Systems Using Networks 
+
+  • Modern systems are often linked to other systems by networks
+
+    - form the point of view of an individual system, the network can be viewed as just another I/O device (network adapter).
+
+    - suppose we use a telnet client running on our local machine to connect to a telnet server on a remote machine:
+
+      -- After we type the hello command in the Telnet client on our local machine and press enter, the client prepares the command string to be sent over the network
+
+      -- The telnet client sends the command string to the Telnet server running on the remote machine
+
+      -- Once the telnet server receives the string, it forwards the command to the remote shell program that is running on the remote machine and waiting for input
+
+      -- The remote shell executes the hello program, which generates the output string
+
+      -- The telnet server then receives the output string from the remote shell and sends it back across the network to the telnet client on the local machine, which 
+          finally displays the output on the local terminal
+
+## Important Themes
+
+###  Amdahl’s Law
+
+  • When we speed up one part of a system, the effect on the overall system performance depends on both how significant this part was and how much it sped up.
+
+    - let Tₒ = total execution time before any improvements are made
+    - let Tₙ = total execution time after improvement
+    - let 𝛼 = a fraction of that time is spent in a particular part of the system
+    - let k = the speedup factor for the improved component
+
+    - The overall execution time would thus be:
+
+      -- Tₙ = (1 - 𝛼).Tₒ + [(𝛼.Tₒ) / k] 
+
+      -- Tₙ = Tₒ.[(1 - 𝛼) + 𝛼 / k]
+
+    - from this we can compute the speedup S = (Tₒ / Tₙ):
+
+    - S = Tₒ / (1 - 𝛼).Tₒ + [(𝛼.Tₒ) / k] 
+
+    - S = Tₒ / Tₒ.[(1 - 𝛼) + 𝛼 / k]
+
+    - S = 1 / (1 - 𝛼) + 𝛼 / k
+
+      -- As an example, consider the case where a part of the system that initially consumed 60% of the time (α =0.6) is sped up by a factor of 3 (k =3). 
+      
+      -- Then we get a speedup of 1 / [0.4 + (0.6 / 3)] = 1.67
