@@ -162,7 +162,7 @@ CHAPTER 10:  System-Level I/O
 
             - a stream of type 'FILE' is an abstraction for a file descriptor and a stream buffer
 
-            - the purpsose of a stream buffer is to minimize the number of expensive LInux I/O system calls
+            - the purpose of a stream buffer is to minimize the number of expensive LInux I/O system calls
 
             
          
