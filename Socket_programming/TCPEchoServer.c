@@ -49,8 +49,7 @@ int main(int argc, char *argv[])
         DieWithError("listen() failed"); 
 
     for (;;) /* Run forever */ 
-    { 
-        
+    {         
         clntLen = sizeof(echoClntAddr); /* Set the size of the in-out parameter */     
 
         /* Wait for a client to connect */     

@@ -21,17 +21,16 @@ int main(int argc, char *argv[])
     unsigned int echoStringLen; /* Length of string to echo */ 
     int bytesRcvd, totalBytesRcvd; /* Bytes read in single recv() and total bytes read */ 
 
-    if ((argc < 3) || (argc > 4)) /* Test for correct number of arguments */ 
+    if ((argc < 2) || (argc > 3)) /* Test for correct number of arguments */ 
     {         
-        fprintf(stderr, "Usage: %s <Server IP> <Echo Word> [<Echo Port>]\n", argv[0]); 
+        fprintf(stderr, "Usage: %s <Server IP> [<Echo Port>]\n", argv[0]); 
         exit(1); 
     } 
 
     servIP = argv[1]; /* First arg' server IP address (dotted quad) */ 
-    echoString = argv[2]; /* Second arg' string to echo */ 
-
-    if (argc == 4) 
-        echoServPort = atoi(argv[3]); /* Use given port, if any */ 
+    
+    if (argc == 3) 
+        echoServPort = atoi(argv[2]); /* Use given port, if any */ 
     else 
         echoServPort = 7; /* 7 is the well-known port for the echo service */ 
 
@@ -46,30 +45,61 @@ int main(int argc, char *argv[])
     echoServAddr.sin_port = htons(echoServPort); /* Server port */ 
     
     /* Establish the connection to the echo server */ 
-    if (connect(sock, (struct sockaddr *) &echoServAddr, sizeof(echoServAddr)) < 0) 
+    if (connect(sock, (struct sockaddr *) &echoServAddr, sizeof(echoServAddr)) < 0)
+    {
         DieWithError(" connect () failed"); 
-    echoStringLen = strlen(echoString); /* Determine input length */ 
-
-    /* Send the string to the server */ 
-    if (send(sock, echoString, echoStringLen, 0) != echoStringLen) 
-        DieWithError("send() sent a different number of bytes than expected"); 
-
-    /* Receive the same string back from the server */ 
-    totalBytesRcvd = 0; 
-    puts("Received: "); /* Setup to print the echoed string */     
-    while (totalBytesRcvd < echoStringLen) 
-    { 
-        /* Receive up to the buffer size (minus i to leave space for 
-        a null terminator) bytes from the sender */ 
-        if ((bytesRcvd = recv(sock, echoBuffer, RCVBUFSIZE - 1, 0)) <= 0) 
-            DieWithError("recv() failed or connection closed prematurely"); 
-
-        totalBytesRcvd += bytesRcvd; /* Keep tally of total bytes */         
-        echoBuffer[bytesRcvd] = '\0'; /* Terminate the string! */ 
-        printf("%s", echoBuffer); /* Print the echo buffer */
     } 
+        
+    else
+    {
+        char buf[RCVBUFSIZE];
 
-    printf("\n"); /* Print a final linefeed */    
-    close(sock);
-    exit(0);
+        printf("You have successfully established a connection with the server at port: %d!\n", echoServAddr.sin_port);
+        printf("Press enter without sending a message to quit.\n\n");
+
+        while(1)
+        {
+            printf("Enter a message to send to the server: ");
+            fgets(buf, sizeof(buf), stdin);
+
+            if (buf[0] == '\n')
+            {
+                puts("No input recieved for message, exiting.");
+                break;
+            }
+
+            if (strchr(buf, '\n') == NULL)
+            {
+                printf("Warning: your message exceeded %d bytes, full message not sent!\n", RCVBUFSIZE);
+                int discarded_char;
+                while ((discarded_char = getchar()) != '\n' && discarded_char != EOF);
+            }
+
+            char* echoString = buf;
+            echoStringLen = strlen(echoString); /* Determine input length */ 
+
+            /* Send the string to the server */ 
+            if (send(sock, echoString, echoStringLen, 0) != echoStringLen) 
+                DieWithError("send() sent a different number of bytes than expected"); 
+
+            /* Receive the same string back from the server */ 
+            totalBytesRcvd = 0; 
+            printf("Received from server: "); /* Setup to print the echoed string */     
+            while (totalBytesRcvd < echoStringLen) 
+            { 
+                /* Receive up to the buffer size (minus 1 to leave space for 
+                a null terminator) bytes from the sender */ 
+                if ((bytesRcvd = recv(sock, echoBuffer, RCVBUFSIZE - 1, 0)) <= 0) 
+                    DieWithError("recv() failed or connection closed prematurely"); 
+
+                totalBytesRcvd += bytesRcvd; /* Keep tally of total bytes */         
+                echoBuffer[bytesRcvd] = '\0'; /* Terminate the string! */ 
+                printf("%s", echoBuffer); /* Print the echo buffer */
+                printf("\n\n");
+            } 
+        }
+        
+        close(sock);
+        exit(0);
+    }
 }
