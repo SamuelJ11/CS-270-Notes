@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
             DieWithError("accept() failed"); 
 
         /* clntSock is connected to a client! */ 
-        printf("Handling client %s\n", inet_ntoa(echoClntAddr.sin_addr)); 
+        printf("Handling client %s at ephemeral port: %d\n", inet_ntoa(echoClntAddr.sin_addr), ntohs(echoClntAddr.sin_port)); 
         HandleTCPClient (clntSock); 
     } 
 }

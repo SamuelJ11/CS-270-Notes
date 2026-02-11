@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
     if (argc == 3) 
         echoServPort = atoi(argv[2]); /* Use given port, if any */ 
     else 
-        echoServPort = 7; /* 7 is the well-known port for the echo service */ 
+        echoServPort = 5000; 
 
     /* Create a reliable, stream socket using TCP */ 
     if ((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) 
@@ -54,8 +54,8 @@ int main(int argc, char *argv[])
     {
         char buf[RCVBUFSIZE];
 
-        printf("You have successfully established a connection with the server at port: %d!\n", echoServAddr.sin_port);
-        printf("Press enter without sending a message to quit.\n\n");
+        printf("You have successfully established a connection with the server at port: %d!\n", ntohs(echoServAddr.sin_port));
+        printf("Press Enter without sending a message to quit.\n\n");
 
         while(1)
         {
