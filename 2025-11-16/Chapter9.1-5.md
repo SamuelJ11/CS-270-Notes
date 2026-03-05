@@ -1,0 +1,210 @@
+## CHAPTER 9:  Virtual Memory
+
+    • Processes in a system share the CPU and main memory (physical memory aka RAM) with other processes.
+
+    • Modern systems provide an abstraction of main memory known as virtual memory (VM).
+
+        - provides each process with a large, uniform and private address space
+    
+    • VM provides 3 important capabilities:
+
+        (1) uses main memory efficiently by treating it as a cache for an address space stored on disk
+
+        (2) simplifies memory management by providing each process with a uniform address space
+
+        (3) protects the address space of each process from corruption by other processes
+
+## Physical and Virtual Addressing
+
+    • The main memory of a computer system is organized as an array of M contiguous byte-sized cells, where each byte has a        unique physical address (PA).
+
+    • With virtual addressing, the CPU accesses main memory by generating a virtual address (VA) which is converted to the appropriate physical address before being sent to main memory.
+
+        - this is done via dedicated hardware on the CPU chip called the 'Memory Management Unit' (MMU) which uses a lookup table     stored in main memory to translate virtual addresses on the fly
+
+
+## Address Spaces    
+
+    • An address space is an ordered set of nonnegative integer addresses {0, 1, 2, . . .}
+
+    • A virtual address space with N  = 2ⁿ addresses is called an n-bit address space.  
+
+        - modern systems support either 32-bit or 64-bit virtual address spaces
+
+    • A system also has a physical address space that corresponds to the 'M' bytes of physical memory in the system {0, 1, 2, . . ., M - 1}
+
+
+## VM as a tool for Caching
+
+    • The disk holds the full VM array, but RAM holds a cache of the parts that a program is currently using
+
+    • The data on disk is partitioned into blocks that serve as the transfer units between the disk and the main memory.
+
+        - VM systems handle this by partitioning the virtual memory into fixed-size blocks called 'virtual pages' (VPs).
+
+            -- each virtual page is P = 2ᵖ bytes in size
+
+        - similarly, physical memory (RAM aka main memory) is partitioned into physical pages (PPs) that are also P bytes in size
+
+            -- physical pages are also called page frames
+
+    • Conceptually VM is one huge array of bytes, and not all of that array actually exists yet:
+        
+        - the OS doesn’t create pages until they are needed
+
+    • At any point, the set of virtual pages is partitioned into 3 disjoint subsets:
+
+        (1) unallocated - pages that have not yet been allocated by the VM system (pages that either haven't yet been created by the OS,   have no data in them, or that don't occupy any space on disk or in RAM)
+
+        (2) cached - allocated pages that are currently cached in physical memory
+
+        (3) uncached - allocated pages that are not cached in physical memory
+
+    • See figure 9.3 for an illustrative example of the above.
+
+### DRAM Cache Organization
+
+    • Remember that DRAM cache is used to denote the VM system's cache that caches virtual pages in main memory:
+
+        - SRAM cahce is is the L1, L2 and L3 cache memories between the CPU and main memory
+
+    • DRAM is organized to minimize main memory cache misses, which have an enormous cost since DRAM cahce misses are served from disk, which is has access times roughly 100,000 times slower than that of DRAM.
+
+    • Becuase of the large miss penalty and the expense of accessing the first byte from a disk sector, virtual pages tend to be large (typically 4KB to 2MB).
+
+        * re-read 6.4 notes to catch up on set-associativity, write-through and write-back policies if needed
+
+    • Due to the large miss penalty, DRAM caches are fully associative (read 6.4 notes to catch up on set-associativity if confused)
+
+        - this means any virtual page can be placed in a ny physical page
+
+    • Because of the large access time of disk, DRAM caches always use write-back instead of write-through.
+
+### Page Tables
+
+    • A page table in physical memory maps virtual pages to physical pages:
+
+        - the address translation hardware in the MMU reads the page table each time it converts a virtual address to a      physical address
+            
+        - the operating system is responsible for maintaining the contents of the page table and transferring pages back and forth between disk and DRAM 
+
+    • A page table is an array of page table entries (PTEs) consisting of a valid bit and an n-bit address field.
+
+        - the valid bit indicates whether the virtual page is currently cached in DRAM
+
+        - if the valid bit is set, the address field indicates the start of the corresponding physical page in DRAM where the virtual page is cached
+
+        - if the valid bit is not set, then a null address indicates that the virtual page has not yet been allocated, otherwise the address points to the start of the virtual page on disk
+
+            * see figure 9.4 on page 832 for a diagram of this
+    
+    • Remember that for fully-associative caches like DRAM, any physical page can contain any virtual page     
+
+    • In the process of translating a virtual address (VA) to a physical address (PA), the virtual address is logically divided, and a portion of it is used as an index to find the correct entry in the page table:
+
+        (1) first, the CPU Generates the VA when it wants to access a word of data (e.g., a variable)
+
+        (2) next, the address translation hardware (MMU) splits the virtual address into two main parts:
+
+            -- Virtual Page Number (VPN) - this part acts as the index into the page table
+
+            -- Virtual Page Offset (VPO) - this part indicates the position of the word within the page
+
+        (3) the Virtual Page Number (VPN) is used as the index to locate the specific Page Table Entry (PTE) in the page table, which resides in main memory (DRAM/RAM)
+
+        (4) PTE read - the MMU reads the contents of that PTE
+
+        (5) translation - if the valid bit in the PTE is set, the hardware extracts the Physical Page Number (PPN) from the page table
+
+        (6) physical address construction - the PPN is combined with the original VPO to form the final PA, which is sent to the DRAM to fetch the word
+
+### Page Hits
+
+    • If the valid bit is set, the address translation hardware knows that a particular virtual page is cached in memory, so it uses the physical memory address in the PTE (which points to the start of the cached page) to construct the physical address of the word.
+
+### Page Faults
+
+    • When the CPU references a word in a virtual page that is not cached, this known as a page fault.  
+
+    • Referencing figure 9.5 on page 833, when the address translation hardware infers from the valid bit that VP 3 is not cached, it triggers a page fault exception, which is handled by the the page fault exception handler in the kernel:
+
+        - the kernel then selects a victim page (in this case VP 4 stored in PP 3), and if VP 4 has been modified, the 
+            kernel must write it back to disk (write-back)
+
+    • Next, the kernel copies VP 3 from disk to PP 3 in memory, updates PTE 3, and then returns.
+
+        - when the handler returns, it restarts the faulting instruction, which resends the faulting virtual address to the address translation hardware
+
+    • In virtual memory parlance, blocks are known as 'pages' and the activity of transferring a page between disk and memory is known as 'swapping' or 'paging'
+
+        - pages are 'swapped (paged) in' from disk to DRAM, and 'swapped (paged) out' from DRAM to disk
+
+        - the strategy of waiting until the last momemnt to swap in a page when a miss occurs is known as 'demand paging'
+
+### Allocating pages
+
+    • See figure 9.8 on page 835 for an example of the OS allocating a new page of virtual memory, for example, as a result of calling malloc().
+          
+### Locality to the Rescue Again
+
+    • The principle of locality promises that at any point in time, the total number of distinct pages that a program will reference will be a smaller set of active pages known as the 'working set' or 'resident set'
+
+    • If the working set size exceeds the size of physical memory, then the program can produce an unfortunate situation known as 'thrashing', where pages are swapped in and out continuously.
+
+## VM as a Tool for Memory Management
+
+    • Operating systems provide a separate page table, and thus a seperate virtual address space for each process
+
+        - multiple virtual pages can be mapped to the same shared physical page
+
+    • VM greatly simplifies linking and loading:
+
+        (1) every process on a given linux system has a similar memory format:
+        
+            - the code segement always starts at virtual address 0x400000
+            - the data segment follows the code segment
+            - the stack occupies the highest portion of the user process address space and grows downward
+
+            such uniformity allows linkers to form fully linked executables that are independent of the ultimate location of the code and data in physical memory
+
+        (2) The OS does not copy program code into RAM when a process starts:
+
+            - when the loader loads a program, it allocates virtual pages for your code and data. 
+            
+            - it then sets their page table entries as invalid which simply designates that these pages are not in RAM yet
+
+            - the loader then stores a pointer in the PTE, but instead of pointing to a physical page in RAM, the PTE’s address field points to the offset in the executable file on disk where this page actually lives
+
+            - the loader does NOT copy the code or data into RAM, RAM stays empty - the loader just sets up a mapping from virtual pages to the various executable file locations (.text, .data) on disk
+
+            - when the CPU tries to fetch the first instruction from the .text section, it looks up the virtual page in the page table
+            
+                -- this page has a valid bit set to 0, triggering a page fault, which informs the OS that the page lives in "a.out" at offset X, so the OS allocate a free physical page and reads ONLY THAT PAGE from disk into RAM
+
+            - lastly, the valid bit is updated to 1 in the PTE and the CPUrResume the instruction - this is called 'On Demand Paging'
+
+            - this notion of mapping a set of contiguous virtual pages to an arbitrary location in an arbitrary file is known as 'memory mapping'
+            
+            - Linux provides a system call called 'mmap' that allows application programs to do their own memory mapping
+            
+        (3) Rather than including separate copies of the kernel and standard C library in each process, the operating system can arrange for multiple processes to share a single copy of this code by mapping the appropriate virtual pages in different processes to the same physical pages
+
+        (4) When your program wants more heap (malloc), the OS allocates contiguous virtual pages for you — because your program likes clean, linear memory, but physically in RAM, those pages do not need to be next to each other
+
+## VM as a Tool for Memory Protection
+
+    • Providing seperate virtual address spaces makes it easy to isolate the private memories of different processes
+
+    • The address translation mechanism can be extended in a natural way to provide finer access control to the memory system:
+
+        - permission bits can be added to the PTE for even finer access control
+
+    • Figure 9.10 on page 838 shows something particularly illuminating:
+
+        - while each process has its own PTE, VP 1 for process j and i map the same physical page
+
+        - the OS often shares the same code page among processes if they all map it (mmap) or the both mark have read permissions for that physical page
+
+        - an important thing to note is that these permissions are per (virtual) page, not per process
+        
+
