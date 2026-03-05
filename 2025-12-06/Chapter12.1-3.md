@@ -1,0 +1,246 @@
+# CHAPTER 12:  Concurrent Programming
+
+    • Applications that use application-level concurrency are known as 'concurrent programs' and modern operating systems provide three basic approaches for building concurrent programs:
+
+        (1) Processes: each logical control flow is a process that is scheduled and maintained by the kernel
+
+        (2) I/O multiplexing: logical flows are modeled as state machines that the main program explicitly transitions
+
+        (3) Threads:  logical flows that run in the context of a single process and are scheduled by the kernel
+
+## Concurrent Programming with Processes
+
+    • The simplest way to build a concurrent program is with processes, using familiar functions such as fork, exec, and waitpid.
+
+        - example: accepting client connection requests in the parent and then forking new child processes to serve each new client
+
+    • Recall that the kernel's file table entry is only freed when all file descriptors referring to it are closed because the kernel uses  a reference count:
+
+        - a common mistake is the parent accepts connection, forks but never closes connection with child, child closes thier connection to client, but file entry stays alive forever (refcount = 1)
+
+        - overtime the parent accumulates thousands of open file table entries and the kernel runs out of memory, crashing the server
+
+### A Concurrent Server Based on Processes
+
+    • All of the discussion and code for this short section is skipped due the large knowledge pull from chapter 11 (Network Programming) which we did not cover in class
+              
+### Pros and Cons of Processes
+        
+    • Processes give safety through memory isolation but make sharing data harder and slower due to separate address spaces and expensive IPC.
+
+## Concurrent Programming with I/O multiplexing
+
+    • So I used Chat-gpt to summarize this section because I've become so brainrotted at this point that I can no longer use my higher congnitive abilities . . .
+
+    • When writing a server that must respond to multiple independent I/O events—such as:
+
+        - a client connecting over the network
+
+        - a user typing commands on standard input
+
+        you run into a blocking problem:
+
+        - accept() blocks waiting for client connections
+
+        - read() on stdin blocks waiting for user input
+
+        - if you choose one, you ignore the other.
+
+    • I/O Multiplexing with select() solves this by letting the kernel block for you until any of a set of file descriptors becomes ready.
+
+        - fd_set represents a set of file descriptors as a bit vector.
+
+        - you manipulate these sets only with:
+
+            -- FD_ZERO — clear set
+
+            -- FD_SET — add descriptor
+
+            -- FD_CLR — remove descriptor
+
+            -- FD_ISSET — test membership
+
+    • select(n, &read_set, NULL, NULL, NULL) blocks until at least one descriptor in read_set is readable:
+
+        - select() modifies the fd_set to contain only the ready descriptors, so you must rebuild the read set every loop.
+
+    • Below is a conceptual outline of an Iterative Echo Server with select
+
+        - This example server monitors:
+
+            -- stdin (descriptor 0)
+
+            -- the listening socket
+
+        - Flow:
+
+            (1) build a read set containing stdin and listenfd
+
+            (2) call select()
+
+            (3) if stdin is ready → process commands
+
+            (4) if listenfd is ready → accept() a new connection and echo data
+
+        - Limitations:
+
+            - once it starts echoing for a client, the server blocks until the client closes the connection—so stdin commands can be delayed
+
+    • Below is a conceptual outline of a Concurrent Event-Driven Server (Better Version):
+
+        - a refined design turns the server into an event-driven state machine:
+
+            (1) maintain a pool of all active clients
+
+            (2) use select() to detect when any client is ready
+
+            (3) for each ready client, echo exactly one line per loop iteration
+
+        - this avoids blocking on any single client
+
+        - data structures in the pool:
+
+            -- clientfd[] — active client sockets
+
+            -- clientrio[] — buffered Rio objects
+
+            -- read_set — all descriptors to monitor
+
+            -- ready_set — result from select
+
+            -- maxfd, maxi — help minimize scanning work
+
+        - functions:
+
+            -- init_pool — start pool with only the listening fd
+
+            -- add_client — add a new connection to the pool
+
+            -- check_clients — for each ready client, read/echo one line or remove it on EOF
+
+        - big picture
+
+            -- I/O multiplexing enables:
+
+                (1) non-blocking handling of multiple input sources
+
+                (2) concurrent behavior in a single-threaded process
+
+                (3) event-driven design patterns using state machines
+
+                (4) it avoids the overhead and complexity of processes (separate address spaces, heavy IPC) and threads (synchronization)
+
+## Threads
+
+    • Ready for more Chat-GPT generated content? . . . 
+
+    • A thread is a logical flow running inside a process.
+
+        - each thread has its own:
+
+            -- program counter (PC)
+
+            -- registers
+
+            -- stack + stack pointer
+
+            -- thread ID (TID)
+
+        - but all threads in a process share:
+
+            -- code
+
+            -- global variables
+
+            -- heap
+
+            -- shared libraries
+
+            -- open file descriptors
+
+            -- kernel context
+
+    • A process starts with one thread: the main thread, and can create peer threads
+
+        - kernel switches between threads (like processes) when:
+
+            -- a thread blocks (e.g., read, sleep)
+
+            -- timer interrupt occurs
+
+    • Thread switches are faster than process switches because threads have smaller context.
+
+    • Any thread can pthread_cancel any other
+
+    • Any thread can pthread_join any specific peer.
+
+    • All threads can read/write the same shared data (→ race conditions possible).
+
+    • Pthreads basics
+
+        - creating a thread via the pthread_create() funciton:
+
+            pthread_create(pthread_t *tid, pthread_attr_t *attr, void *(*f)(void *), void *arg);
+
+            -- runs f(arg) in the new thread
+
+            -- returns new TID in tid
+
+            -- 'attr' almost always NULL for now
+
+            -- thread routines (a function you want the new thread to execute) always take a void* input and return a void* (for generality)
+
+        - when you return data from a thread (for example an integer), you can’t return a simple int directly
+        
+            -- if you want to return an int, you must allocate memory to hold that int and then return a pointer to it
+
+        - for example, inside the thread routine we have:
+
+            int *result = malloc(sizeof(int));
+            *result = 42;
+            return (void *)result;  // you cast the pointer to void* because the thread function’s return type is void*
+
+        - when you call pthread_join(), you’ll get back the void* that the thread returned, but you need to cast it back to the original type (int):
+
+            void *ret;
+            pthread_t tid;
+            
+            Pthread_create(&tid,NULL,thread,NULL); // here we assume the thread is already created but the code for this is shown anyway
+            pthread_join(tid, &ret);
+
+            int *int_result = (int *)ret;  // Cast the void* back to int*
+            int value = *int_result;       // Dereference to get the actual integer
+
+            free(int_result);              // Don’t forget to free the allocated memory!
+
+    • A thread ends when:
+
+        - it returns from the thread routine
+
+        - it calls pthread_exit()
+
+        - another thread calls pthread_cancel(tid)
+
+        - any thread calls exit(), which kills all threads in the process
+
+    • Reaping threads
+
+        - thread A waits for thread B using:
+
+            -- pthread_join(tid, &retval);
+
+            -- only waits for one specific thread (unlike wait for processes)
+
+            -- retrieves the return value and frees thread resources
+
+            -- if you don’t join a thread, you must detach it
+
+    • Detached threads
+
+        - cannot be joined
+
+        - automatically frees its memory and stack when done
+
+        - pthread_detach(tid);
+
+    • By default, threads are created joinable, and in order to avoid memory leaks, each joinable thread should be either explicitly reaped by another thread or detached by a call to the pthread_detach() function.
