@@ -5,5 +5,7 @@
         "string.h": "c",
         "stat.h": "c",
         "functional": "c"
-    }
+    },
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+    "python-envs.pythonProjects": []
 }
