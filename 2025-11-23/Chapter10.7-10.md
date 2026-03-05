@@ -1,0 +1,160 @@
+# CHAPTER 10:  System-Level I/O
+
+## Reading File Metadata
+
+    • An application can retrieve information about a file (sometimes called the file’s metadata) by calling the stat() and fstat() functions.
+
+        - see metadata.c for a demonstration of the stat() function
+
+    • The stat() function takes as input a filename and fills in the members of a stat structure shown below:
+
+        struct stat {
+            dev_t     st_dev;           /* Device */
+            ino_t     st_ino;           /* Inode */
+            mode_t    st_mode;          /* Protection and file type */
+            nlink_t   st_nlink;         /* Number of hard links */
+            uid_t     st_uid;           /* User ID of owner */
+            gid_t     st_gid;           /* Group ID of owner */
+            dev_t     st_rdev;          /* Device type (if inode device) */
+            off_t     st_size;          /* Total size, in bytes */
+            unsigned long st_blksize;   /* Block size for filesystem I/O */
+            unsigned long st_blocks;    /* Number of blocks allocated */
+            time_t    st_atime;         /* Time of last access */
+            time_t    st_mtime;         /* Time of last modification */
+            time_t    st_ctime;         /* Time of last status change */
+        };
+
+    • A macro in C is just a chunk of code that gets expanded by the preprocessor before the compiler runs.
+
+    • A predicate is something that returns true or false.
+
+        - a macro predicate is a macro that evaluates to true or false
+
+    • The 'st_size' member contains the file size in bytes, and the 'st_mode' member encodes both the file permission bits and the file type.
+
+    • Linux defines macro predicates in <sys/stat.h> for determining the file type from the st_mode member (these are the same bitmasks used in
+        readwrite.c)
+
+        - S_ISREG(m) - is this a regular file?
+
+        - S_ISDIR(m) - is this a directory file?
+
+        - S_IRUSR(m) - does the owner (user) have read permission?
+
+        - S_IWUSR(m) - does the owner (user) have write permission?
+
+            -- *(m) is the st_mode field from struct stat
+
+## Reading Directory Contents
+
+    • Applications can read the contents of a directory with the 'readdir' family of functions.
+
+    • The 'opendir()' function takes a pathname and returns a pointer to a directory stream. 
+    
+        - a stream is an abstraction for an ordered list of items, which in this case is a list of directory entries
+
+    • Consider the following declarations on page 928 as this shit is confusing asf:
+
+        DIR *opendir(const char *name);
+
+            - returns a pointer to handle if OK, NULL on error
+
+            - the function doesn't return the directory data itself; it returns a pointer to a structure called 'DIR'; this pointer is the directory stream handle
+
+            - the argument is the pathname of the directory you want to open
+
+    • Once you have the directory handle (DIR *dirp), you use readdir to read the contents:
+
+        struct dirent *readdir(DIR *dirp);
+
+            - returns a pointer to next directory entry if OK, NULL if no more entries or error
+
+            - this function returns a pointer to a struct 'dirent', and this is the structure that holds the specific information about a   single file or subdirectory within the opened directory
+
+            - the argument is the handle you received from the opendir() function
+
+            - readdir() uses this handle to know which directory to read and where it left off
+
+    • Each call to readdir() returns a pointer to the next directory entry in the stream 'dirp', or NULL if there are no more entries
+
+        - importantly, readdir() sets the global variable errno to an error code (non-zero) if an error occured.
+
+    • Each directory entry is a structure of the form shown below:
+
+        struct dirent {
+        ino_t d_ino;        /* inode number */            
+        char d_name[256];   /* Filename */
+        };
+
+        - these are the only two members that are standard across all systems:
+        
+        - the 'd_name' member is the filename, and 'd_ino' is the file location
+
+    • The closedir() function takes the directory stream handle as its argument and closes the stream and frees up any of its resources.
+
+    • See 'directory.c' for a demonstration of how applications can read files in a directory
+    
+## Sharing files
+
+    • The kernel represents open files using three related data structures:
+
+        (1) Descriptor table - each process has its own seperate descriptor table whose entries are indexed by the 
+                                the process's open file descriptors (fds), and each open descriptor points to an entry 
+                                in the file table
+
+        (2) File table - the set of open files shared by all processes, each table entry consists of the current file position,
+                            a count of the number of descriptor entries that point to it, and a pointer to an entry in the 
+                            v-node talbe.
+                            closing a descriptor decrements the reference count in the associated file table, and once the reference 
+                            count reaches zero, the kernel deletes the file table entry
+
+        (3) V-node table - shared by all processes, each entry contains most of hte information in the 'stat' structure
+    
+    • Each descriptor has its own distinct file position (the index of where the next read or write will happen inside the file), so different reads on different descriptors can fetch data from different locations in the file.
+
+    • See figures 10.12 and 10.14 on pages 930-931 to understand how a parent process shares files with its child:
+
+        - the child gets its own duplicate copy of the parent's descriptor table, and tehy both share the same set of open file tables      and thus share the same file position
+
+            -- as a consequence of this, both the parent and child must close thier descriptors before the kernel will delete the        corresponding file table entry
+
+## I/O Redirection
+
+    • Linux shells provide I/O redirection operators that allow users to associate standard input and output with disk files
+
+        - example: ls > foo.txt is interpreted as "run ls, but instead of printing the output to the screen, send the output 
+                    into a file called foo.txt"
+
+    • Reference figure 10.15 on page 933 to see how the intdup2(intoldfd,intnewfd) funciton redirects standard output, its pretty straighforward.
+
+## Stardard I/O
+
+    • The C language defines a set of higher-level input and output functions, called the stardard I/O library, that provides
+        programmers with a higher-level alternative to Unix I/O.
+
+        - the library 'libc' providse functions for opening and closing files (fopen and fclose) reading and writing bytes (fread and       fwrite) reading and writing strings (fgets and fputs) and sophisticated formatted I/O (scanf and printf)
+
+    • The stardard I/O library models an open file as a 'stream' - to the programmer, a stream is a pointer to a structure of type 'FILE'
+
+        - a streams bundles together:
+        
+            a file descriptor
+            a buffer
+            metadata
+
+        - every ANSI C program begins with three open streams:
+
+            (1) stdin
+            (2) stdout
+            (3) stderr
+
+    • Take a look at the declarations below:
+
+        #include <stdio.h>
+        extern FILE *stdin;  /* Standard input (descriptor 0) */
+        extern FILE *stdout; /* Standard output (descriptor 1) */
+        extern FILE *stderr; /* Standard error (descriptor 2) */
+
+        - a stream of type 'FILE' is an abstraction for a file descriptor and a stream buffer
+
+        - the purpose of a stream buffer is to minimize the number of expensive LInux I/O system calls
